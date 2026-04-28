@@ -205,6 +205,21 @@
 - 本番相当では `Cloud Run`、`Pub/Sub`、`Firestore` を利用する
 - まずは最小構成で作り、必要に応じてサービス分割や補強を進める
 
+## ディレクトリ構成
+
+```text
+apps/
+  frontend/   Nuxt フロントエンド
+  backend/    Go バックエンド
+openapi/      OpenAPI 定義
+packages/     共有定義や補助コード
+infra/
+  local/      ローカル開発用設定
+  gcp/        GCP 向け設定
+docs/         運用・設計ドキュメント
+scripts/      補助スクリプト
+```
+
 ## 今後の実装候補
 
 - ユーザー登録
