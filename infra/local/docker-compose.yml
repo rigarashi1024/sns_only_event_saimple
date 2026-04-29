@@ -1,0 +1,90 @@
+services:
+  frontend:
+    build:
+      context: ../..
+      dockerfile: apps/frontend/Dockerfile.dev
+    working_dir: /app
+    command: ["/bin/sh", "/workspace/infra/local/scripts/frontend-dev.sh"]
+    ports:
+      - "3001:3001"
+    environment:
+      NUXT_HOST: 0.0.0.0
+      NUXT_PORT: 3001
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ../../:/workspace
+      - ../../apps/frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - firestore-emulator
+      - pubsub-emulator
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: apps/backend/Dockerfile.dev
+    working_dir: /app
+    command: ["/bin/sh", "/workspace/infra/local/scripts/backend-dev.sh"]
+    ports:
+      - "8081:8081"
+    environment:
+      APP_ENV: local
+      PORT: 8081
+      FIRESTORE_EMULATOR_HOST: firestore-emulator:8080
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      PUBSUB_PROJECT_ID: sns-only-event-local
+    volumes:
+      - ../../:/workspace
+      - ../../apps/backend:/app
+      - go_pkg_cache:/go/pkg
+      - go_build_cache:/root/.cache/go-build
+    depends_on:
+      - firestore-emulator
+      - pubsub-emulator
+
+  firestore-emulator:
+    build:
+      context: ../..
+      dockerfile: infra/local/emulators/Dockerfile
+    working_dir: /workspace
+    command:
+      [
+        "gcloud",
+        "emulators",
+        "firestore",
+        "start",
+        "--host-port=0.0.0.0:8080",
+        "--database-mode=firestore-native",
+      ]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../../:/workspace
+      - firestore_emulator_data:/root/.config/gcloud/emulators
+
+  pubsub-emulator:
+    build:
+      context: ../..
+      dockerfile: infra/local/emulators/Dockerfile
+    working_dir: /workspace
+    command:
+      [
+        "gcloud",
+        "beta",
+        "emulators",
+        "pubsub",
+        "start",
+        "--host-port=0.0.0.0:8085",
+        "--data-dir=/var/pubsub",
+      ]
+    ports:
+      - "8085:8085"
+    volumes:
+      - pubsub_emulator_data:/var/pubsub
+
+volumes:
+  frontend_node_modules:
+  go_pkg_cache:
+  go_build_cache:
+  firestore_emulator_data:
+  pubsub_emulator_data:
