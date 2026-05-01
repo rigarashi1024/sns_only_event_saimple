@@ -11,6 +11,7 @@ import (
 func main() {
 	handler := httpHandler.NewHandler()
 	server := api.Handler(handler)
+	server = httpHandler.WithCORS(server)
 
 	log.Println("listening on :8081")
 	log.Fatal(http.ListenAndServe(":8081", server))
