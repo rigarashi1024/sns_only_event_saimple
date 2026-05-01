@@ -118,6 +118,17 @@
   - `nickname`
   - `created_at`
   - `updated_at`
+- `sessions`
+  - `id`
+  - `user_id`
+  - `access_token_encrypted`
+  - `access_token_expires_at`
+  - `refresh_token_encrypted`
+  - `refresh_token_expires_at`
+  - `internal_jwt_jti`
+  - `provider_type`
+  - `created_at`
+  - `updated_at`
 - `posts`
   - `id`
   - `user_id`
@@ -186,6 +197,7 @@
 - 独自 `JWT` の有効期限は `access_token` と同程度とする
 - 独自 `JWT` は `Cookie` に保存する
 - `access_token` と `refresh_token` はバックエンド側で保存する
+- 保存先コレクションは `sessions` を使用する
 - リクエスト時は、フロントから送られた `Cookie` 内の独自 `JWT` をバックエンドで検証する
 - 独自 `JWT` が期限切れ、または対応する `access_token` が期限切れの場合は、保存済み `refresh_token` を用いて `access_token` を更新する
 - `refresh_token` も期限切れの場合は再ログインとする
