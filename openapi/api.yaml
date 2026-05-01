@@ -1,0 +1,109 @@
+openapi: 3.0.3
+info:
+  title: Event Driven SNS API
+  version: 0.1.0
+  description: |
+    Event driven SNS backend API.
+servers:
+  - url: http://localhost:8081
+tags:
+  - name: health
+  - name: auth
+paths:
+  /healthz:
+    get:
+      tags:
+        - health
+      operationId: getHealthz
+      summary: Health check endpoint
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthzResponse"
+  /auth/login:
+    post:
+      tags:
+        - auth
+      operationId: postAuthLogin
+      summary: Login with id and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    HealthzResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+    LoginRequest:
+      type: object
+      required:
+        - login_id
+        - password
+      properties:
+        login_id:
+          type: string
+          description: User login id or email
+          example: test-user
+        password:
+          type: string
+          format: password
+          example: password
+    LoginResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+        - token_type
+        - expires_in
+      properties:
+        access_token:
+          type: string
+          example: access-token
+        refresh_token:
+          type: string
+          example: refresh-token
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          format: int32
+          example: 900
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: invalid credentials
