@@ -24,25 +24,31 @@ func TestIssueSessionTokens(t *testing.T) {
 	if !strings.HasPrefix(tokens.JTI, "jti_") {
 		t.Fatalf("JTI = %q, want jti_ prefix", tokens.JTI)
 	}
-	if len(strings.Split(tokens.AccessToken, ".")) != 3 {
-		t.Fatalf("AccessToken = %q, want JWT format", tokens.AccessToken)
+	if len(strings.Split(tokens.InternalAccessToken, ".")) != 3 {
+		t.Fatalf("InternalAccessToken = %q, want JWT format", tokens.InternalAccessToken)
 	}
-	if !strings.HasPrefix(tokens.RefreshToken, "refresh_") {
-		t.Fatalf("RefreshToken = %q, want refresh_ prefix", tokens.RefreshToken)
+	if !strings.HasPrefix(tokens.ProviderAccessToken, "provider_access_") {
+		t.Fatalf("ProviderAccessToken = %q, want provider_access_ prefix", tokens.ProviderAccessToken)
 	}
-	if tokens.AccessTokenEncrypted == tokens.AccessToken {
-		t.Fatal("AccessTokenEncrypted must not equal AccessToken")
+	if !strings.HasPrefix(tokens.ProviderRefreshToken, "provider_refresh_") {
+		t.Fatalf("ProviderRefreshToken = %q, want provider_refresh_ prefix", tokens.ProviderRefreshToken)
 	}
-	if tokens.RefreshTokenEncrypted == tokens.RefreshToken {
-		t.Fatal("RefreshTokenEncrypted must not equal RefreshToken")
+	if tokens.ProviderAccessTokenEncrypted == tokens.ProviderAccessToken {
+		t.Fatal("ProviderAccessTokenEncrypted must not equal ProviderAccessToken")
 	}
-	if !tokens.AccessTokenExpiresAt.Equal(now.Add(accessTokenTTL)) {
-		t.Fatalf("AccessTokenExpiresAt = %v, want %v", tokens.AccessTokenExpiresAt, now.Add(accessTokenTTL))
+	if tokens.ProviderRefreshTokenEncrypted == tokens.ProviderRefreshToken {
+		t.Fatal("ProviderRefreshTokenEncrypted must not equal ProviderRefreshToken")
 	}
-	if !tokens.RefreshTokenExpiresAt.Equal(now.Add(refreshTokenTTL)) {
-		t.Fatalf("RefreshTokenExpiresAt = %v, want %v", tokens.RefreshTokenExpiresAt, now.Add(refreshTokenTTL))
+	if !tokens.InternalAccessTokenExpiresAt.Equal(now.Add(accessTokenTTL)) {
+		t.Fatalf("InternalAccessTokenExpiresAt = %v, want %v", tokens.InternalAccessTokenExpiresAt, now.Add(accessTokenTTL))
 	}
-	if tokens.ExpiresIn != int32(accessTokenTTL/time.Second) {
-		t.Fatalf("ExpiresIn = %d, want %d", tokens.ExpiresIn, int32(accessTokenTTL/time.Second))
+	if !tokens.ProviderAccessTokenExpiresAt.Equal(now.Add(accessTokenTTL)) {
+		t.Fatalf("ProviderAccessTokenExpiresAt = %v, want %v", tokens.ProviderAccessTokenExpiresAt, now.Add(accessTokenTTL))
+	}
+	if !tokens.ProviderRefreshTokenExpiresAt.Equal(now.Add(refreshTokenTTL)) {
+		t.Fatalf("ProviderRefreshTokenExpiresAt = %v, want %v", tokens.ProviderRefreshTokenExpiresAt, now.Add(refreshTokenTTL))
+	}
+	if tokens.InternalAccessTokenExpiresInSec != int32(accessTokenTTL/time.Second) {
+		t.Fatalf("InternalAccessTokenExpiresInSec = %d, want %d", tokens.InternalAccessTokenExpiresInSec, int32(accessTokenTTL/time.Second))
 	}
 }

@@ -23,16 +23,17 @@ type UserSeed struct {
 }
 
 type SessionSeed struct {
-	ID                    string    `firestore:"id"`
-	UserID                string    `firestore:"user_id"`
-	AccessTokenEncrypted  string    `firestore:"access_token_encrypted"`
-	AccessTokenExpiresAt  time.Time `firestore:"access_token_expires_at"`
-	RefreshTokenEncrypted string    `firestore:"refresh_token_encrypted"`
-	RefreshTokenExpiresAt time.Time `firestore:"refresh_token_expires_at"`
-	InternalJWTJTI        string    `firestore:"internal_jwt_jti"`
-	ProviderType          string    `firestore:"provider_type"`
-	CreatedAt             time.Time `firestore:"created_at"`
-	UpdatedAt             time.Time `firestore:"updated_at"`
+	ID                            string    `firestore:"id"`
+	UserID                        string    `firestore:"user_id"`
+	ProviderType                  string    `firestore:"provider_type"`
+	InternalJWTJTI                string    `firestore:"internal_jwt_jti"`
+	InternalAccessTokenExpiresAt  time.Time `firestore:"internal_access_token_expires_at"`
+	ProviderAccessTokenEncrypted  string    `firestore:"provider_access_token_encrypted"`
+	ProviderAccessTokenExpiresAt  time.Time `firestore:"provider_access_token_expires_at"`
+	ProviderRefreshTokenEncrypted string    `firestore:"provider_refresh_token_encrypted"`
+	ProviderRefreshTokenExpiresAt time.Time `firestore:"provider_refresh_token_expires_at"`
+	CreatedAt                     time.Time `firestore:"created_at"`
+	UpdatedAt                     time.Time `firestore:"updated_at"`
 }
 
 func main() {
@@ -79,16 +80,17 @@ func main() {
 
 	sessions := []SessionSeed{
 		{
-			ID:                    "session-test-user-001",
-			UserID:                "test-user",
-			AccessTokenEncrypted:  "seed-encrypted-access-token",
-			AccessTokenExpiresAt:  now.Add(15 * time.Minute),
-			RefreshTokenEncrypted: "seed-encrypted-refresh-token",
-			RefreshTokenExpiresAt: now.Add(24 * time.Hour),
-			InternalJWTJTI:        "seed-jti-test-user-001",
-			ProviderType:          "local",
-			CreatedAt:             now,
-			UpdatedAt:             now,
+			ID:                            "session-test-user-001",
+			UserID:                        "test-user",
+			ProviderType:                  "local",
+			InternalJWTJTI:                "seed-jti-test-user-001",
+			InternalAccessTokenExpiresAt:  now.Add(15 * time.Minute),
+			ProviderAccessTokenEncrypted:  "seed-encrypted-provider-access-token",
+			ProviderAccessTokenExpiresAt:  now.Add(15 * time.Minute),
+			ProviderRefreshTokenEncrypted: "seed-encrypted-provider-refresh-token",
+			ProviderRefreshTokenExpiresAt: now.Add(24 * time.Hour),
+			CreatedAt:                     now,
+			UpdatedAt:                     now,
 		},
 	}
 

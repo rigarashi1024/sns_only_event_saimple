@@ -88,16 +88,17 @@ func (h *Handler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// sessions には平文 token ではなく、暗号化済み token と検証に必要なメタデータを保存する。
+	// sessions には provider token の暗号化済み値と、internal JWT 検証に必要なメタデータを保存する。
 	if err := h.sessionRepo.Create(ctx, repository.Session{
-		ID:                    tokens.SessionID,
-		UserID:                user.ID,
-		AccessTokenEncrypted:  tokens.AccessTokenEncrypted,
-		AccessTokenExpiresAt:  tokens.AccessTokenExpiresAt,
-		RefreshTokenEncrypted: tokens.RefreshTokenEncrypted,
-		RefreshTokenExpiresAt: tokens.RefreshTokenExpiresAt,
-		InternalJWTJTI:        tokens.JTI,
-		ProviderType:          "local",
+		ID:                            tokens.SessionID,
+		UserID:                        user.ID,
+		ProviderType:                  "local",
+		InternalJWTJTI:                tokens.JTI,
+		InternalAccessTokenExpiresAt:  tokens.InternalAccessTokenExpiresAt,
+		ProviderAccessTokenEncrypted:  tokens.ProviderAccessTokenEncrypted,
+		ProviderAccessTokenExpiresAt:  tokens.ProviderAccessTokenExpiresAt,
+		ProviderRefreshTokenEncrypted: tokens.ProviderRefreshTokenEncrypted,
+		ProviderRefreshTokenExpiresAt: tokens.ProviderRefreshTokenExpiresAt,
 	}); err != nil {
 		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
 			Message: "failed to create session",
@@ -106,10 +107,9 @@ func (h *Handler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, gen.LoginResponse{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-		TokenType:    "Bearer",
-		ExpiresIn:    tokens.ExpiresIn,
+		InternalAccessToken: tokens.InternalAccessToken,
+		InternalTokenType:   "Bearer",
+		InternalExpiresIn:   tokens.InternalAccessTokenExpiresInSec,
 	})
 }
 

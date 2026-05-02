@@ -26,15 +26,17 @@ type TokenService struct {
 
 // IssuedTokens はログイン成功時に発行されるアプリ内部用トークン一式です。
 type IssuedTokens struct {
-	SessionID             string
-	JTI                   string
-	AccessToken           string
-	RefreshToken          string
-	AccessTokenEncrypted  string
-	RefreshTokenEncrypted string
-	AccessTokenExpiresAt  time.Time
-	RefreshTokenExpiresAt time.Time
-	ExpiresIn             int32
+	SessionID                       string
+	JTI                             string
+	InternalAccessToken             string
+	ProviderAccessToken             string
+	ProviderRefreshToken            string
+	ProviderAccessTokenEncrypted    string
+	ProviderRefreshTokenEncrypted   string
+	InternalAccessTokenExpiresAt    time.Time
+	ProviderAccessTokenExpiresAt    time.Time
+	ProviderRefreshTokenExpiresAt   time.Time
+	InternalAccessTokenExpiresInSec int32
 }
 
 type internalJWTClaims struct {
@@ -57,7 +59,7 @@ func NewTokenService(secret string) (*TokenService, error) {
 	}, nil
 }
 
-// IssueSessionTokens は session_id / jti / internal JWT / refresh token を発行します。
+// IssueSessionTokens は session_id / jti / internal JWT / local provider token を発行します。
 func (s *TokenService) IssueSessionTokens(userID string, now time.Time) (*IssuedTokens, error) {
 	if userID == "" {
 		return nil, errors.New("user id is required")
@@ -73,46 +75,53 @@ func (s *TokenService) IssueSessionTokens(userID string, now time.Time) (*Issued
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate jti: %w", err)
 	}
-	// refresh token は JWT ではなく、再発行時に提示してもらうランダムな秘密値として発行する。
-	refreshToken, err := randomID("refresh")
+	// local ログインでは、将来の OAuth provider から受け取る token と同じ意味の値を自前発行する。
+	providerAccessToken, err := randomID("provider_access")
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+		return nil, fmt.Errorf("failed to generate provider access token: %w", err)
+	}
+	providerRefreshToken, err := randomID("provider_refresh")
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate provider refresh token: %w", err)
 	}
 
-	accessTokenExpiresAt := now.Add(accessTokenTTL)
-	refreshTokenExpiresAt := now.Add(refreshTokenTTL)
+	internalAccessTokenExpiresAt := now.Add(accessTokenTTL)
+	providerAccessTokenExpiresAt := now.Add(accessTokenTTL)
+	providerRefreshTokenExpiresAt := now.Add(refreshTokenTTL)
 	// フロント用 access token は、session_id / user_id / jti / exp を含む internal JWT として発行する。
-	accessToken, err := s.signInternalJWT(internalJWTClaims{
+	internalAccessToken, err := s.signInternalJWT(internalJWTClaims{
 		Subject:   userID,
 		SessionID: sessionID,
 		JTI:       jti,
 		IssuedAt:  now.Unix(),
-		ExpiresAt: accessTokenExpiresAt.Unix(),
+		ExpiresAt: internalAccessTokenExpiresAt.Unix(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign internal jwt: %w", err)
 	}
 
-	// Firestore には平文 token を残さず、DB 保存用鍵で暗号化した値だけを保存する。
-	accessTokenEncrypted, err := s.encryptForDB(accessToken)
+	// provider token は将来の外部 OAuth token と同じ扱いで、Firestore には暗号化済み値だけを保存する。
+	providerAccessTokenEncrypted, err := s.encryptForDB(providerAccessToken)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt access token: %w", err)
+		return nil, fmt.Errorf("failed to encrypt provider access token: %w", err)
 	}
-	refreshTokenEncrypted, err := s.encryptForDB(refreshToken)
+	providerRefreshTokenEncrypted, err := s.encryptForDB(providerRefreshToken)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt refresh token: %w", err)
+		return nil, fmt.Errorf("failed to encrypt provider refresh token: %w", err)
 	}
 
 	return &IssuedTokens{
-		SessionID:             sessionID,
-		JTI:                   jti,
-		AccessToken:           accessToken,
-		RefreshToken:          refreshToken,
-		AccessTokenEncrypted:  accessTokenEncrypted,
-		RefreshTokenEncrypted: refreshTokenEncrypted,
-		AccessTokenExpiresAt:  accessTokenExpiresAt,
-		RefreshTokenExpiresAt: refreshTokenExpiresAt,
-		ExpiresIn:             int32(accessTokenTTL / time.Second),
+		SessionID:                       sessionID,
+		JTI:                             jti,
+		InternalAccessToken:             internalAccessToken,
+		ProviderAccessToken:             providerAccessToken,
+		ProviderRefreshToken:            providerRefreshToken,
+		ProviderAccessTokenEncrypted:    providerAccessTokenEncrypted,
+		ProviderRefreshTokenEncrypted:   providerRefreshTokenEncrypted,
+		InternalAccessTokenExpiresAt:    internalAccessTokenExpiresAt,
+		ProviderAccessTokenExpiresAt:    providerAccessTokenExpiresAt,
+		ProviderRefreshTokenExpiresAt:   providerRefreshTokenExpiresAt,
+		InternalAccessTokenExpiresInSec: int32(accessTokenTTL / time.Second),
 	}, nil
 }
 

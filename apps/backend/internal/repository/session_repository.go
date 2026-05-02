@@ -10,16 +10,17 @@ import (
 
 // Session は Firestore の sessions コレクションに保存するログインセッション情報です。
 type Session struct {
-	ID                    string    `firestore:"id"`
-	UserID                string    `firestore:"user_id"`
-	AccessTokenEncrypted  string    `firestore:"access_token_encrypted"`
-	AccessTokenExpiresAt  time.Time `firestore:"access_token_expires_at"`
-	RefreshTokenEncrypted string    `firestore:"refresh_token_encrypted"`
-	RefreshTokenExpiresAt time.Time `firestore:"refresh_token_expires_at"`
-	InternalJWTJTI        string    `firestore:"internal_jwt_jti"`
-	ProviderType          string    `firestore:"provider_type"`
-	CreatedAt             time.Time `firestore:"created_at"`
-	UpdatedAt             time.Time `firestore:"updated_at"`
+	ID                            string    `firestore:"id"`
+	UserID                        string    `firestore:"user_id"`
+	ProviderType                  string    `firestore:"provider_type"`
+	InternalJWTJTI                string    `firestore:"internal_jwt_jti"`
+	InternalAccessTokenExpiresAt  time.Time `firestore:"internal_access_token_expires_at"`
+	ProviderAccessTokenEncrypted  string    `firestore:"provider_access_token_encrypted"`
+	ProviderAccessTokenExpiresAt  time.Time `firestore:"provider_access_token_expires_at"`
+	ProviderRefreshTokenEncrypted string    `firestore:"provider_refresh_token_encrypted"`
+	ProviderRefreshTokenExpiresAt time.Time `firestore:"provider_refresh_token_expires_at"`
+	CreatedAt                     time.Time `firestore:"created_at"`
+	UpdatedAt                     time.Time `firestore:"updated_at"`
 }
 
 // SessionRepository は sessions コレクションへのアクセスをまとめます。
