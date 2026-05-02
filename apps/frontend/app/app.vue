@@ -67,6 +67,7 @@ async function submitLogin() {
     await $fetch('/auth/login', {
       baseURL: config.public.apiBaseUrl,
       method: 'POST',
+      credentials: 'include',
       body: {
         login_id: loginId.value,
         password: password.value,

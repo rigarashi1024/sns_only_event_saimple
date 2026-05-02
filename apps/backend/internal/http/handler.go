@@ -17,14 +17,16 @@ type Handler struct {
 	userRepo     *repository.UserRepository
 	sessionRepo  *repository.SessionRepository
 	tokenService *auth.TokenService
+	cookieSecure bool
 }
 
 // NewHandler は Firestore client を利用する repository を組み立てます。
-func NewHandler(firestoreClient *gofirestore.Client, tokenService *auth.TokenService) *Handler {
+func NewHandler(firestoreClient *gofirestore.Client, tokenService *auth.TokenService, cookieSecure bool) *Handler {
 	return &Handler{
 		userRepo:     repository.NewUserRepository(firestoreClient),
 		sessionRepo:  repository.NewSessionRepository(firestoreClient),
 		tokenService: tokenService,
+		cookieSecure: cookieSecure,
 	}
 }
 
@@ -106,10 +108,21 @@ func (h *Handler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// internal JWT はレスポンス body には載せず、JavaScript から読めない HttpOnly cookie として返す。
+	http.SetCookie(w, &http.Cookie{
+		Name:     "internal_access_token",
+		Value:    tokens.InternalAccessToken,
+		Path:     "/",
+		Expires:  tokens.InternalAccessTokenExpiresAt,
+		MaxAge:   int(tokens.InternalAccessTokenExpiresInSec),
+		HttpOnly: true,
+		Secure:   h.cookieSecure,
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	writeJSON(w, http.StatusOK, gen.LoginResponse{
-		InternalAccessToken: tokens.InternalAccessToken,
-		InternalTokenType:   "Bearer",
-		InternalExpiresIn:   tokens.InternalAccessTokenExpiresInSec,
+		InternalTokenType: "Bearer",
+		InternalExpiresIn: tokens.InternalAccessTokenExpiresInSec,
 	})
 }
 

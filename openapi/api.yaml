@@ -35,7 +35,7 @@ paths:
         password_hash は API リクエスト/レスポンスには含めず、Firestore 内部の認証用フィールドとして扱います。
         認証成功後は session_id と jti を生成し、session_id / user_id / jti / exp を含む internal JWT と
         local provider 相当の access token / refresh token を発行します。
-        フロントには internal JWT のみを返却し、Firestore の sessions コレクションには AES-GCM で暗号化した
+        フロントには internal JWT を HttpOnly cookie として返却し、Firestore の sessions コレクションには AES-GCM で暗号化した
         provider access token / provider refresh token と internal JWT のメタデータを保存します。
       requestBody:
         required: true
@@ -91,20 +91,17 @@ components:
     LoginResponse:
       type: object
       required:
-        - internal_access_token
         - internal_token_type
         - internal_expires_in
       properties:
-        internal_access_token:
-          type: string
-          description: Internal JWT used by the frontend.
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         internal_token_type:
           type: string
+          description: Token type of the internal access token stored in the HttpOnly cookie.
           example: Bearer
         internal_expires_in:
           type: integer
           format: int32
+          description: Lifetime in seconds of the internal access token stored in the HttpOnly cookie.
           example: 900
     ErrorResponse:
       type: object

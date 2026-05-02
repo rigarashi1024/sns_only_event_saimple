@@ -28,14 +28,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load token encryption key: %v", err)
 	}
-	// tokenService は internal JWT 発行、refresh token 発行、DB 保存用暗号化をまとめて扱う。
+	// tokenService は internal JWT 発行、provider token 発行、DB 保存用暗号化をまとめて扱う。
 	tokenService, err := auth.NewTokenService(tokenSecret)
 	if err != nil {
 		log.Fatalf("failed to create token service: %v", err)
 	}
 
 	// OpenAPI から生成したルーティングに、実装したハンドラと CORS 設定を接続する。
-	handler := httpHandler.NewHandler(firestoreClient, tokenService)
+	// local は HTTP で動かすため Secure=false、dev/prd は HTTPS 前提で Secure=true にする。
+	cookieSecure := cfg.Env != config.EnvLocal
+	handler := httpHandler.NewHandler(firestoreClient, tokenService, cookieSecure)
 	server := api.Handler(handler)
 	server = httpHandler.WithCORS(server)
 
