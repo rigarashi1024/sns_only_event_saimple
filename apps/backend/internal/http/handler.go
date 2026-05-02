@@ -14,15 +14,17 @@ import (
 
 // Handler は OpenAPI 生成コードから呼ばれる HTTP ハンドラの実装です。
 type Handler struct {
-	userRepo    *repository.UserRepository
-	sessionRepo *repository.SessionRepository
+	userRepo     *repository.UserRepository
+	sessionRepo  *repository.SessionRepository
+	tokenService *auth.TokenService
 }
 
 // NewHandler は Firestore client を利用する repository を組み立てます。
-func NewHandler(firestoreClient *gofirestore.Client) *Handler {
+func NewHandler(firestoreClient *gofirestore.Client, tokenService *auth.TokenService) *Handler {
 	return &Handler{
-		userRepo:    repository.NewUserRepository(firestoreClient),
-		sessionRepo: repository.NewSessionRepository(firestoreClient),
+		userRepo:     repository.NewUserRepository(firestoreClient),
+		sessionRepo:  repository.NewSessionRepository(firestoreClient),
+		tokenService: tokenService,
 	}
 }
 
@@ -77,14 +79,24 @@ func (h *Handler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	// ログイン成功時は sessions コレクションにセッション情報を残す。
+	// 認証成功後、アプリ内部用の session_id / jti / access JWT / refresh token を発行する。
+	tokens, err := h.tokenService.IssueSessionTokens(user.ID, now)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
+			Message: "failed to issue tokens",
+		})
+		return
+	}
+
+	// sessions には平文 token ではなく、暗号化済み token と検証に必要なメタデータを保存する。
 	if err := h.sessionRepo.Create(ctx, repository.Session{
+		ID:                    tokens.SessionID,
 		UserID:                user.ID,
-		AccessTokenEncrypted:  "dummy-access-token",
-		AccessTokenExpiresAt:  now.Add(15 * time.Minute),
-		RefreshTokenEncrypted: "dummy-refresh-token",
-		RefreshTokenExpiresAt: now.Add(24 * time.Hour),
-		InternalJWTJTI:        "dummy-jti",
+		AccessTokenEncrypted:  tokens.AccessTokenEncrypted,
+		AccessTokenExpiresAt:  tokens.AccessTokenExpiresAt,
+		RefreshTokenEncrypted: tokens.RefreshTokenEncrypted,
+		RefreshTokenExpiresAt: tokens.RefreshTokenExpiresAt,
+		InternalJWTJTI:        tokens.JTI,
 		ProviderType:          "local",
 	}); err != nil {
 		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
@@ -94,10 +106,10 @@ func (h *Handler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, gen.LoginResponse{
-		AccessToken:  "dummy-access-token",
-		RefreshToken: "dummy-refresh-token",
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
 		TokenType:    "Bearer",
-		ExpiresIn:    900,
+		ExpiresIn:    tokens.ExpiresIn,
 	})
 }
 

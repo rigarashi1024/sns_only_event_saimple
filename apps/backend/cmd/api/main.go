@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	api "github.com/rigarashi1024/sns_only_event_saimple/apps/backend/gen"
+	"github.com/rigarashi1024/sns_only_event_saimple/apps/backend/internal/auth"
 	"github.com/rigarashi1024/sns_only_event_saimple/apps/backend/internal/config"
 	firestoreclient "github.com/rigarashi1024/sns_only_event_saimple/apps/backend/internal/firestore"
 	httpHandler "github.com/rigarashi1024/sns_only_event_saimple/apps/backend/internal/http"
@@ -22,8 +23,19 @@ func main() {
 	}
 	defer firestoreClient.Close()
 
+	// local では環境変数、dev/prd では将来 Secret Manager から token 用の秘密値を取得する。
+	tokenSecret, err := config.GetDBEncryptionKey(ctx, cfg)
+	if err != nil {
+		log.Fatalf("failed to load token encryption key: %v", err)
+	}
+	// tokenService は internal JWT 発行、refresh token 発行、DB 保存用暗号化をまとめて扱う。
+	tokenService, err := auth.NewTokenService(tokenSecret)
+	if err != nil {
+		log.Fatalf("failed to create token service: %v", err)
+	}
+
 	// OpenAPI から生成したルーティングに、実装したハンドラと CORS 設定を接続する。
-	handler := httpHandler.NewHandler(firestoreClient)
+	handler := httpHandler.NewHandler(firestoreClient, tokenService)
 	server := api.Handler(handler)
 	server = httpHandler.WithCORS(server)
 

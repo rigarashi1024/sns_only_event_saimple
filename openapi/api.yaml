@@ -33,6 +33,9 @@ paths:
         Firestore の users コレクションに保存されたユーザーを login_id または email で検索し、
         リクエストの平文 password を保存済みの bcrypt ハッシュと照合します。
         password_hash は API リクエスト/レスポンスには含めず、Firestore 内部の認証用フィールドとして扱います。
+        認証成功後は session_id と jti を生成し、session_id / user_id / jti / exp を含む internal JWT と
+        アプリ用 refresh token を返却します。Firestore の sessions コレクションには AES-GCM で暗号化した
+        internal JWT と refresh token を保存します。
       requestBody:
         required: true
         content:
@@ -94,10 +97,12 @@ components:
       properties:
         access_token:
           type: string
-          example: access-token
+          description: Internal JWT used by the frontend.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         refresh_token:
           type: string
-          example: refresh-token
+          description: Application refresh token issued with the session.
+          example: refresh_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         token_type:
           type: string
           example: Bearer
