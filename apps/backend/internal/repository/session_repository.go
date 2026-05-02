@@ -8,6 +8,7 @@ import (
 	gofirestore "cloud.google.com/go/firestore"
 )
 
+// Session は Firestore の sessions コレクションに保存するログインセッション情報です。
 type Session struct {
 	ID                    string    `firestore:"id"`
 	UserID                string    `firestore:"user_id"`
@@ -21,15 +22,19 @@ type Session struct {
 	UpdatedAt             time.Time `firestore:"updated_at"`
 }
 
+// SessionRepository は sessions コレクションへのアクセスをまとめます。
 type SessionRepository struct {
 	client *gofirestore.Client
 }
 
+// NewSessionRepository は Firestore client を使って SessionRepository を生成します。
 func NewSessionRepository(client *gofirestore.Client) *SessionRepository {
 	return &SessionRepository{client: client}
 }
 
+// Create はセッション ID と作成日時を補完して sessions コレクションへ保存します。
 func (r *SessionRepository) Create(ctx context.Context, session Session) error {
+	// 呼び出し側が ID を指定しない場合は、ユーザー ID と現在時刻から一意な ID を作る。
 	if session.ID == "" {
 		session.ID = fmt.Sprintf("session-%s-%d", session.UserID, time.Now().UTC().UnixNano())
 	}

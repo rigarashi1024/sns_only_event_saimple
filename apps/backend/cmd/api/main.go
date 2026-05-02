@@ -15,12 +15,14 @@ func main() {
 	ctx := context.Background()
 	cfg := config.Load()
 
+	// API 起動時に Firestore client を作成し、各ハンドラから共有して利用する。
 	firestoreClient, err := firestoreclient.NewClient(ctx, cfg)
 	if err != nil {
 		log.Fatalf("failed to create firestore client: %v", err)
 	}
 	defer firestoreClient.Close()
 
+	// OpenAPI から生成したルーティングに、実装したハンドラと CORS 設定を接続する。
 	handler := httpHandler.NewHandler(firestoreClient)
 	server := api.Handler(handler)
 	server = httpHandler.WithCORS(server)
