@@ -8,6 +8,7 @@ import (
 
 	gofirestore "cloud.google.com/go/firestore"
 	"github.com/rigarashi1024/sns_only_event_saimple/apps/backend/gen"
+	"github.com/rigarashi1024/sns_only_event_saimple/apps/backend/internal/auth"
 	"github.com/rigarashi1024/sns_only_event_saimple/apps/backend/internal/repository"
 )
 
@@ -33,7 +34,7 @@ func (h *Handler) GetHealthz(w http.ResponseWriter, r *http.Request) {
 }
 
 // PostAuthLogin はダミーログイン API です。
-// 現時点では Firestore 上のユーザー存在確認と固定パスワードで判定します。
+// Firestore 上のユーザー存在確認と bcrypt ハッシュ化済みパスワードで判定します。
 func (h *Handler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 	var req gen.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -67,9 +68,8 @@ func (h *Handler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ダミー実装のため、パスワードは固定文字列のみ許可する。
-	// 本実装では Firestore のハッシュ値検証などに置き換える想定。
-	if req.Password != "password" {
+	// Firestore に保存された bcrypt ハッシュとリクエストの平文パスワードを照合する。
+	if user.PasswordHash == "" || !auth.VerifyPassword(req.Password, user.PasswordHash) {
 		writeJSON(w, http.StatusUnauthorized, gen.ErrorResponse{
 			Message: "invalid credentials",
 		})

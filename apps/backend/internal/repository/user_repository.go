@@ -15,10 +15,11 @@ var ErrUserNotFound = errors.New("user not found")
 
 // User は Firestore の users コレクションに保存するユーザー情報です。
 type User struct {
-	ID       string `firestore:"id"`
-	Name     string `firestore:"name"`
-	Email    string `firestore:"email"`
-	Nickname string `firestore:"nickname"`
+	ID           string `firestore:"id"`
+	Name         string `firestore:"name"`
+	Email        string `firestore:"email"`
+	Nickname     string `firestore:"nickname"`
+	PasswordHash string `firestore:"password_hash"`
 }
 
 // UserRepository は users コレクションへのアクセスをまとめます。

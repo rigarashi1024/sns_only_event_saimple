@@ -7,17 +7,19 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/rigarashi1024/sns_only_event_saimple/apps/backend/internal/auth"
 )
 
 const defaultProjectID = "sns-only-event-local"
 
 type UserSeed struct {
-	ID        string    `firestore:"id"`
-	Name      string    `firestore:"name"`
-	Email     string    `firestore:"email"`
-	Nickname  string    `firestore:"nickname"`
-	CreatedAt time.Time `firestore:"created_at"`
-	UpdatedAt time.Time `firestore:"updated_at"`
+	ID           string    `firestore:"id"`
+	Name         string    `firestore:"name"`
+	Email        string    `firestore:"email"`
+	Nickname     string    `firestore:"nickname"`
+	PasswordHash string    `firestore:"password_hash"`
+	CreatedAt    time.Time `firestore:"created_at"`
+	UpdatedAt    time.Time `firestore:"updated_at"`
 }
 
 type SessionSeed struct {
@@ -48,23 +50,30 @@ func main() {
 	defer client.Close()
 
 	now := time.Now().UTC()
+	// ローカル検証用ユーザーの初期パスワードは全員 password にする。
+	passwordHash, err := auth.HashPassword("password")
+	if err != nil {
+		log.Fatalf("failed to hash seed password: %v", err)
+	}
 
 	users := []UserSeed{
 		{
-			ID:        "test-user",
-			Name:      "Test User",
-			Email:     "test@example.com",
-			Nickname:  "test",
-			CreatedAt: now,
-			UpdatedAt: now,
+			ID:           "test-user",
+			Name:         "Test User",
+			Email:        "test@example.com",
+			Nickname:     "test",
+			PasswordHash: passwordHash,
+			CreatedAt:    now,
+			UpdatedAt:    now,
 		},
 		{
-			ID:        "user-002",
-			Name:      "User Two",
-			Email:     "user2@example.com",
-			Nickname:  "user2",
-			CreatedAt: now,
-			UpdatedAt: now,
+			ID:           "user-002",
+			Name:         "User Two",
+			Email:        "user2@example.com",
+			Nickname:     "user2",
+			PasswordHash: passwordHash,
+			CreatedAt:    now,
+			UpdatedAt:    now,
 		},
 	}
 

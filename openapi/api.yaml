@@ -29,6 +29,10 @@ paths:
         - auth
       operationId: postAuthLogin
       summary: Login with id and password
+      description: |
+        Firestore の users コレクションに保存されたユーザーを login_id または email で検索し、
+        リクエストの平文 password を保存済みの bcrypt ハッシュと照合します。
+        password_hash は API リクエスト/レスポンスには含めず、Firestore 内部の認証用フィールドとして扱います。
       requestBody:
         required: true
         content:
@@ -77,6 +81,8 @@ components:
         password:
           type: string
           format: password
+          description: |
+            Login password. The API receives this value as plaintext over HTTPS and compares it with the bcrypt hash stored in Firestore.
           example: password
     LoginResponse:
       type: object
