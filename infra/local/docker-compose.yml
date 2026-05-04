@@ -33,6 +33,7 @@ services:
       FIRESTORE_EMULATOR_HOST: firestore-emulator:8080
       PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
       PUBSUB_PROJECT_ID: sns-only-event-local
+      TOKEN_ENCRYPTION_KEY: replace-with-local-dev-key
     volumes:
       - ../../:/workspace
       - ../../apps/backend:/app

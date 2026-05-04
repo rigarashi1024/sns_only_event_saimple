@@ -1,0 +1,113 @@
+openapi: 3.0.3
+info:
+  title: Event Driven SNS API
+  version: 0.1.0
+  description: |
+    Event driven SNS backend API.
+servers:
+  - url: http://localhost:8081
+tags:
+  - name: health
+  - name: auth
+paths:
+  /healthz:
+    get:
+      tags:
+        - health
+      operationId: getHealthz
+      summary: Health check endpoint
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthzResponse"
+  /auth/login:
+    post:
+      tags:
+        - auth
+      operationId: postAuthLogin
+      summary: Login with id and password
+      description: |
+        Firestore の users コレクションに保存されたユーザーを login_id または email で検索し、
+        リクエストの平文 password を保存済みの bcrypt ハッシュと照合します。
+        password_hash は API リクエスト/レスポンスには含めず、Firestore 内部の認証用フィールドとして扱います。
+        認証成功後は session_id と jti を生成し、session_id / user_id / jti / exp を含む internal JWT と
+        local provider 相当の access token / refresh token を発行します。
+        フロントには internal JWT を HttpOnly cookie として返却し、Firestore の sessions コレクションには AES-GCM で暗号化した
+        provider access token / provider refresh token と internal JWT のメタデータを保存します。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    HealthzResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+    LoginRequest:
+      type: object
+      required:
+        - login_id
+        - password
+      properties:
+        login_id:
+          type: string
+          description: User login id or email
+          example: test-user
+        password:
+          type: string
+          format: password
+          description: |
+            Login password. The API receives this value as plaintext over HTTPS and compares it with the bcrypt hash stored in Firestore.
+          example: password
+    LoginResponse:
+      type: object
+      required:
+        - internal_token_type
+        - internal_expires_in
+      properties:
+        internal_token_type:
+          type: string
+          description: Token type of the internal access token stored in the HttpOnly cookie.
+          example: Bearer
+        internal_expires_in:
+          type: integer
+          format: int32
+          description: Lifetime in seconds of the internal access token stored in the HttpOnly cookie.
+          example: 900
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: invalid credentials

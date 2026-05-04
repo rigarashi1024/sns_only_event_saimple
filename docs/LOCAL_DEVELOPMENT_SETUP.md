@@ -148,14 +148,50 @@ export PUBSUB_EMULATOR_HOST=localhost:8085
 export PUBSUB_PROJECT_ID=sns-only-event-local
 ```
 
-## 7. よくある注意点
+## 7. Seed データ投入
+
+`users` と `sessions` のダミーデータを Firestore Emulator に投入できます。
+
+```bash
+cd apps/backend
+FIRESTORE_EMULATOR_HOST=localhost:8080 PUBSUB_PROJECT_ID=sns-only-event-local go run ./cmd/seed
+```
+
+投入される主なデータ:
+
+- `users/test-user`
+- `users/user-002`
+- `sessions/session-test-user-001`
+
+## 8. エミュレータ内データの確認
+
+### Firestore
+
+現在の `docker compose` 構成では、`gcloud` ベースの Firestore Emulator を直接起動しているため、Firestore データを確認する専用 UI は同梱していません。
+
+確認方法の候補:
+
+- Go / Node の確認スクリプトを作る
+- Firestore Emulator に接続する簡易 API を作る
+- 将来的に Firebase Local Emulator Suite へ切り替えて UI を使う
+
+補足:
+
+- Firebase Local Emulator Suite には Firestore をブラウザで確認できる UI があります
+- ただし今の構成は Firebase Emulator Suite ではなく、`gcloud` の emulator を直接使う構成です
+
+### Pub/Sub
+
+Pub/Sub Emulator については、Google Cloud の公式ドキュメントでもコンソール UI や `gcloud pubsub` コマンドはサポート対象外です。確認はアプリケーションコードや補助スクリプト経由で行う前提になります。
+
+## 9. よくある注意点
 
 - Nuxt 初期化前に `docker compose up` すると、`package.json` が無いため frontend コンテナは待機メッセージを出して停止せず待機します
 - Go 初期化前に `docker compose up` すると、`go.mod` が無いため backend コンテナは待機メッセージを出して停止せず待機します
 - Nuxt の `node_modules` は named volume で持つため、ホストの `node_modules` と混ざりません
 - バックエンドは `air` でホットリロードする前提です
 
-## 8. 今後追加したいもの
+## 10. 今後追加したいもの
 
 - Firestore 初期データ投入スクリプト
 - Pub/Sub の topic / subscription 初期化スクリプト
