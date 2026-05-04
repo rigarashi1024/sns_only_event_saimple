@@ -39,7 +39,7 @@ func main() {
 	cookieSecure := cfg.Env != config.EnvLocal
 	handler := httpHandler.NewHandler(firestoreClient, tokenService, cookieSecure)
 	server := api.Handler(handler)
-	server = httpHandler.WithCORS(server)
+	server = httpHandler.WithCORS(server, cfg)
 
 	log.Println("listening on :8081")
 	log.Fatal(http.ListenAndServe(":8081", server))

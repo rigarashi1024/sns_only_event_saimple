@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 )
 
 const tokenEncryptionKeyEnvName = "TOKEN_ENCRYPTION_KEY"
@@ -32,10 +35,28 @@ func getDBEncryptionKeyFromEnv() (string, error) {
 }
 
 func getDBEncryptionKeyFromSecretManager(ctx context.Context, cfg Config) (string, error) {
-	// TODO: dev/prd では Secret Manager から TOKEN_ENCRYPTION_KEY を取得する。
-	// その際は project id、secret id、version の指定と、実行サービスアカウントの
-	// secretAccessor 権限をセットで整備する。
-	_ = ctx
-	_ = cfg
-	return "", fmt.Errorf("Secret Manager key loading is not implemented yet")
+	client, err := secretmanager.NewClient(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to create Secret Manager client: %w", err)
+	}
+	defer client.Close()
+
+	name := fmt.Sprintf(
+		"projects/%s/secrets/%s/versions/%s",
+		cfg.ProjectID,
+		cfg.TokenEncryptionKeySecretID,
+		cfg.TokenEncryptionKeySecretVersion,
+	)
+	result, err := client.AccessSecretVersion(ctx, &secretmanagerpb.AccessSecretVersionRequest{
+		Name: name,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to access token encryption key secret: %w", err)
+	}
+
+	key := string(result.Payload.Data)
+	if key == "" {
+		return "", fmt.Errorf("token encryption key secret %q is empty", name)
+	}
+	return key, nil
 }

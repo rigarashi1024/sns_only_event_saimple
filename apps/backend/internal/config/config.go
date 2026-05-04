@@ -1,11 +1,15 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 const defaultProjectID = "sns-only-event-local"
 const defaultEnv = "local"
 const defaultTokenEncryptionKeySecretID = "TOKEN_ENCRYPTION_KEY"
 const defaultTokenEncryptionKeySecretVersion = "latest"
+const defaultCORSAllowedOrigins = "http://localhost:3001"
 
 const (
 	// EnvLocal はローカル PC や Docker Compose での開発環境です。
@@ -22,6 +26,7 @@ type Config struct {
 	ProjectID                       string
 	TokenEncryptionKeySecretID      string
 	TokenEncryptionKeySecretVersion string
+	CORSAllowedOrigins              []string
 }
 
 // Load は環境変数から設定を読み込みます。
@@ -50,10 +55,30 @@ func Load() Config {
 		tokenEncryptionKeySecretVersion = defaultTokenEncryptionKeySecretVersion
 	}
 
+	corsAllowedOrigins := parseCSVEnv("CORS_ALLOWED_ORIGINS", defaultCORSAllowedOrigins)
+
 	return Config{
 		Env:                             env,
 		ProjectID:                       projectID,
 		TokenEncryptionKeySecretID:      tokenEncryptionKeySecretID,
 		TokenEncryptionKeySecretVersion: tokenEncryptionKeySecretVersion,
+		CORSAllowedOrigins:              corsAllowedOrigins,
 	}
+}
+
+func parseCSVEnv(name string, fallback string) []string {
+	value := os.Getenv(name)
+	if value == "" {
+		value = fallback
+	}
+
+	rawItems := strings.Split(value, ",")
+	items := make([]string, 0, len(rawItems))
+	for _, item := range rawItems {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
 }

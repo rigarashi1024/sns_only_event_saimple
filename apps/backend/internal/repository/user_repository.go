@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	gofirestore "cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
@@ -34,6 +35,11 @@ func NewUserRepository(client *gofirestore.Client) *UserRepository {
 
 // FindByLoginID は document id と email の両方でログイン対象ユーザーを検索します。
 func (r *UserRepository) FindByLoginID(ctx context.Context, loginID string) (*User, error) {
+	// email 形式の入力は email 検索を優先し、document ID と email が衝突した場合の誤認証を避ける。
+	if strings.Contains(loginID, "@") {
+		return r.findByEmail(ctx, loginID)
+	}
+
 	// まず users/{loginID} を直接取得し、通常のログイン ID として扱う。
 	doc, err := r.client.Collection("users").Doc(loginID).Get(ctx)
 	if err == nil {
@@ -51,8 +57,12 @@ func (r *UserRepository) FindByLoginID(ctx context.Context, loginID string) (*Us
 		return nil, err
 	}
 
+	return r.findByEmail(ctx, loginID)
+}
+
+func (r *UserRepository) findByEmail(ctx context.Context, email string) (*User, error) {
 	// document id で見つからない場合は、email として一致するユーザーを探す。
-	iter := r.client.Collection("users").Where("email", "==", loginID).Limit(1).Documents(ctx)
+	iter := r.client.Collection("users").Where("email", "==", email).Limit(1).Documents(ctx)
 	defer iter.Stop()
 
 	snap, iterErr := iter.Next()
