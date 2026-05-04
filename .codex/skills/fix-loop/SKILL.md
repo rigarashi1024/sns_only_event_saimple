@@ -5,82 +5,46 @@ description: Handle Gemini PR review feedback for this repo. Use when the user a
 
 # Fix Loop
 
-Resolve only review feedback that should be fixed now. Track deferred feedback in `docs/GEMINI_REVIEW_TODO.md` or explain it in a PR comment.
+Use scripts for GitHub fetch/comment mechanics and keep Codex reasoning only for classification.
 
-## Inputs
+1. Fetch the latest Gemini review for the current branch PR:
 
-- PR number from the user, or detect from current branch:
-  `gh pr list --head "$(git branch --show-current)" --json number,title,url`
-- Latest Gemini review comments:
-  `gh pr view <PR> --json comments --jq '.comments[] | select(.body | startswith("### 🤖 Gemini PR Review")) | {createdAt, url, body}'`
-
-## Classification
-
-Classify each finding before editing:
-
-- `must`: Clear bug/security/logic issue in the current patch that can break behavior, leak data, corrupt data, or block the intended workflow. Fix now.
-- `todo`: Plausible concern, but not urgent for this PR or depends on future production/runtime assumptions. Add to `docs/GEMINI_REVIEW_TODO.md`.
-- `comment`: False positive, already handled, or intentionally out of scope. Leave a PR comment explaining why no change is needed.
-
-Do not fix style, naming, speculative, or TODO-managed issues just because Gemini says "security".
-
-## Fix Workflow
-
-1. Fetch the latest Gemini review.
-2. Summarize findings and classification.
-3. For `must` items:
-   - Inspect the referenced code.
-   - Make the smallest safe change.
-   - Add or update focused tests when practical.
-4. For `todo` items:
-   - Append an entry to `docs/GEMINI_REVIEW_TODO.md` using its template.
-   - Include PR number/comment URL, reason to defer, and revisit timing.
-5. For `comment` items:
-   - Post a concise PR comment explaining why no code change is needed.
-   - Use a human-facing comment when the loop should stop.
-   - Use a Gemini-context comment only when Gemini should rerun with the explanation as context.
-6. Run relevant validation:
-   - Backend Go: `env GOCACHE=/private/tmp/sns-only-event-go-cache GOMODCACHE=/Users/igarashiryuuta/go/pkg/mod go test ./...` from `apps/backend`.
-   - Frontend: `npm run build` from `apps/frontend` when frontend changed.
-   - Script-only JS: `node --check <file>`.
-7. Commit and push only when the user asked to carry the loop through or when operating under this skill for an existing PR.
-8. Trigger Gemini rerun if needed:
-   - Post a Gemini-context comment that contains both `<!-- gemini-review-context -->` and `/gemini-review`.
-9. Repeat at most 3 iterations. Stop earlier if:
-   - validation fails and needs human judgment,
-   - Gemini repeats a TODO/comment-only finding,
-   - the remaining feedback is non-critical.
-
-## PR Comment Guidance
-
-Use comments to preserve the review flow. Do not edit old Gemini comments.
-
-Human-facing comment format:
-
-```md
-確認しました。
-
-- Finding ...: 今回は修正不要です。理由: ...
-- Finding ...: `docs/GEMINI_REVIEW_TODO.md` に TODO として記録しました。理由: ...
+```bash
+bash scripts/codex-fix-loop.sh latest
 ```
 
-Gemini-context comment format:
+Use `fetch` instead of `latest` only when the older review history is needed.
 
-Use this only when you want GitHub Actions to rerun Gemini review and pass the explanation into the next Gemini prompt. Normal human-facing comments must not include this marker or `/gemini-review`.
+2. Classify each finding:
 
-```md
-<!-- gemini-review-context -->
-/gemini-review
+- `must`: clear bug/security/logic issue in the current patch; fix now.
+- `todo`: plausible but not urgent; append to `docs/GEMINI_REVIEW_TODO.md`.
+- `comment`: false positive, already handled, intentionally out of scope, or repeated comment-only finding.
 
-確認しました。
+3. Validate only what changed:
 
-- Finding ...: 今回は修正不要です。理由: ...
-- Finding ...: `docs/GEMINI_REVIEW_TODO.md` に TODO として記録しました。理由: ...
+- backend: `bash scripts/codex-preflight.sh` when broad validation is useful, or targeted Go tests if the failure is narrow.
+- frontend: `bash scripts/codex-preflight.sh` when frontend changed.
+- script-only JS: `node --check <file>`.
+
+4. Post comments through the script:
+
+Human-facing comment, does not rerun Gemini and is not passed to Gemini:
+
+```bash
+bash scripts/codex-fix-loop.sh comment-human <PR> <COMMENT_FILE>
 ```
 
-## Safety Notes
+Gemini-context comment, passes the explanation to the next Gemini prompt and triggers rerun:
 
-- Do not merge PRs.
-- Do not force-push unless the user explicitly asks.
-- Do not delete branches.
-- Do not revert unrelated user changes.
+```bash
+bash scripts/codex-fix-loop.sh comment-gemini <PR> <COMMENT_FILE>
+```
+
+Plain rerun without extra context:
+
+```bash
+bash scripts/codex-fix-loop.sh rerun <PR>
+```
+
+Stop after at most 3 iterations, or earlier if Gemini repeats a TODO/comment-only finding.
