@@ -50,6 +50,8 @@ try {
 const genAI1 = new GoogleGenerativeAI(apiKey)
 const apiKey2 = process.env.GEMINI_API_KEY2
 const genAI2 = apiKey2 ? new GoogleGenerativeAI(apiKey2) : null
+const key1QuotaExhaustedModels = new Set()
+let key1FallbackNotified = false
 
 const MODEL_FALLBACK_LIST = [
   'gemini-2.5-flash-lite',
@@ -95,6 +97,21 @@ async function notifySlack(message) {
   } catch (err) {
     console.warn('Failed to send Slack notification:', err.message)
   }
+}
+
+async function notifyKey1FallbackToKey2() {
+  if (key1FallbackNotified) return
+  key1FallbackNotified = true
+
+  const exhaustedModels = [...key1QuotaExhaustedModels]
+  const exhaustedModelsText =
+    exhaustedModels.length > 0
+      ? exhaustedModels.map((modelName) => `- ${modelName}`).join('\n')
+      : '- 429 を返した KEY1 モデルは記録されていません'
+
+  await notifySlack(
+    `⚠️ GEMINI_API_KEY1 の候補モデルがすべて利用不可のため、有料の GEMINI_API_KEY2 (${KEY2_MODEL}) にフォールバックしました。\nPR: ${prNumber} / Repo: ${repoFullName}\n\nKEY1 で 429 quota exhausted を返したモデル:\n${exhaustedModelsText}`
+  )
 }
 
 function shouldSkipFile(file) {
@@ -227,7 +244,8 @@ function isLgtm(text) {
   return text.includes('重大な問題はありません。LGTM。')
 }
 
-async function tryGenerate(genAI, modelName, prompt, maxAttempts = 2) {
+async function tryGenerate(genAI, modelName, prompt, options = {}) {
+  const maxAttempts = options.maxAttempts ?? 2
   const model = genAI.getGenerativeModel({ model: modelName })
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -240,6 +258,9 @@ async function tryGenerate(genAI, modelName, prompt, maxAttempts = 2) {
 
       if (isFetchError && err.status === 429) {
         console.warn(`Model ${modelName} quota exhausted (429).`)
+        if (options.recordKey1Quota) {
+          key1QuotaExhaustedModels.add(modelName)
+        }
         return null
       }
 
@@ -264,16 +285,14 @@ async function tryGenerate(genAI, modelName, prompt, maxAttempts = 2) {
 
 async function generateReviewWithRetry(prompt) {
   for (const modelName of MODEL_FALLBACK_LIST) {
-    const text = await tryGenerate(genAI1, modelName, prompt)
+    const text = await tryGenerate(genAI1, modelName, prompt, { recordKey1Quota: true })
     if (text !== null) return text
     console.warn('Falling through to next model...')
   }
 
   if (genAI2) {
     console.warn(`All KEY1 models exhausted. Falling back to GEMINI_API_KEY2 (${KEY2_MODEL})...`)
-    await notifySlack(
-      `⚠️ GEMINI_API_KEY1 の全モデルが枯渇したため、有料の GEMINI_API_KEY2 (${KEY2_MODEL}) にフォールバックしました。\nPR: ${prNumber} / Repo: ${repoFullName}`
-    )
+    await notifyKey1FallbackToKey2()
     const text = await tryGenerate(genAI2, KEY2_MODEL, prompt)
     if (text !== null) return text
     console.error('KEY2 also failed.')
