@@ -7,6 +7,12 @@ description: Create a GitHub pull request for this repo after preflight. Use whe
 
 Use scripts for the mechanical work.
 
+Execution policy:
+
+- Run `bash scripts/codex-pr-creator.sh ...` with escalation from the first attempt.
+- The script may call GitHub APIs and write to `.git` for commit/push/PR creation, so a normal sandbox run may fail.
+- The prefix is approved in Codex rules.
+
 1. Inspect current branch and PR state:
 
 ```bash

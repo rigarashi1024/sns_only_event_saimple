@@ -7,6 +7,12 @@ description: Handle Gemini PR review feedback for this repo. Use when the user a
 
 Use scripts for GitHub fetch/comment mechanics and keep Codex reasoning only for classification.
 
+Execution policy:
+
+- Run `bash scripts/codex-fix-loop.sh ...` with escalation from the first attempt.
+- The script calls GitHub APIs and posts PR comments, so a normal sandbox run may fail.
+- The prefix is approved in Codex rules.
+
 1. Fetch the latest Gemini review for the current branch PR:
 
 ```bash

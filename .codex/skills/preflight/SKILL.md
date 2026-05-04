@@ -13,6 +13,11 @@ Run the scripted preflight:
 bash scripts/codex-preflight.sh
 ```
 
+Execution policy:
+
+- Run this script directly via the approved prefix.
+- If the environment may need network/package-manager access, run it with escalation from the first attempt instead of retrying after a sandbox failure.
+
 The script owns the command flow and report:
 
 - frontend format/lint/typecheck/test when scripts exist
