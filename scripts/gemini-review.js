@@ -29,7 +29,9 @@ const github = axios.create({
 })
 
 const rulesFilePath = 'docs/REVIEW_RULES_SUMMARY.md'
+const todoFilePath = 'docs/GEMINI_REVIEW_TODO.md'
 let rulesSummary = ''
+let reviewTodo = ''
 
 try {
   rulesSummary = fs.readFileSync(rulesFilePath, 'utf8')
@@ -37,6 +39,12 @@ try {
   console.warn(
     `Rules summary file "${rulesFilePath}" not found. Continuing without explicit rules summary.`
   )
+}
+
+try {
+  reviewTodo = fs.readFileSync(todoFilePath, 'utf8')
+} catch (err) {
+  console.warn(`Review TODO file "${todoFilePath}" not found. Continuing without review TODO context.`)
 }
 
 const genAI1 = new GoogleGenerativeAI(apiKey)
@@ -49,7 +57,6 @@ const MODEL_FALLBACK_LIST = [
   'gemini-3.1-flash-lite-preview',
   'gemini-3-flash-preview',
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite-preview-09-2025',
   'gemini-2.0-flash',
 ]
 
@@ -140,6 +147,11 @@ function buildPrompt({ pr, file, changedFilesSummary }) {
 ${rulesSummary}
 ------------------------------------------------------------
 
+未反映レビュー指摘TODO:
+------------------------------------------------------------
+${reviewTodo || '(TODOファイルなし、または未記載)'}
+------------------------------------------------------------
+
 PR情報:
 - タイトル: ${pr.title}
 - ベースブランチ: ${pr.base.ref}
@@ -154,6 +166,8 @@ ${prBody}
 - 対象ファイル以外について推測しないでください。
 - 機能を壊す、またはセキュリティリスクをもたらすクリティカルな問題のみを報告してください。
 - 上記のプロジェクト固有のレビュールールと制約に従ってください。
+- 未反映レビュー指摘TODOに記載済みの内容は、既に人間が把握して管理しているため、同じ内容を再指摘しないでください。
+- TODOに記載済みの内容でも、今回のpatchがそのリスクを明確に悪化させている場合だけ報告してください。
 
 報告してよい問題の種類:
 - bug
@@ -307,18 +321,7 @@ ${body}
 - skipped files: ${skippedCount}`
 }
 
-async function upsertComment(body) {
-  const comments = await fetchAllPages(`/repos/${repoFullName}/issues/${prNumber}/comments`)
-  const existing = comments.find(
-    (comment) => comment.user?.type === 'Bot' && comment.body?.startsWith(BOT_HEADER)
-  )
-
-  if (existing) {
-    await github.patch(`/repos/${repoFullName}/issues/comments/${existing.id}`, { body })
-    console.log('Gemini review comment updated successfully!')
-    return
-  }
-
+async function postComment(body) {
   await github.post(`/repos/${repoFullName}/issues/${prNumber}/comments`, { body })
   console.log('Gemini review comment posted successfully!')
 }
@@ -365,7 +368,7 @@ async function upsertComment(body) {
   }
 
   try {
-    await upsertComment(reviewBody)
+    await postComment(reviewBody)
   } catch (err) {
     if (err.response) {
       console.error('GitHub API error:', err.response.status, err.response.data)

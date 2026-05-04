@@ -42,7 +42,7 @@ Gemini レビューは概ね以下の流れで動作します。
 4. レビュー対象外のファイルを除外する
 5. 各ファイルごとに patch を Gemini に渡してレビューする
 6. 結果を集約して PR コメントとして投稿する
-7. 既存の Gemini コメントがあれば新規追加ではなく更新する
+7. 既存の Gemini コメントは編集せず、新しいコメントとして追加する
 
 ## Gemini に渡す情報
 
@@ -55,8 +55,11 @@ Gemini には、ファイル単位の patch とあわせて以下の情報を渡
 - changed files 一覧
 - 対象ファイルの patch
 - レビュールールの要約
+- 未反映レビュー指摘 TODO
 
 これにより、diff だけを単発で渡すよりも前提を理解しやすくし、見当違いなレビューを減らすことを狙っています。
+
+未反映レビュー指摘 TODO は `docs/GEMINI_REVIEW_TODO.md` で管理します。Gemini は TODO に記載済みの項目を、人間が既に把握しているものとして扱い、同じ内容を繰り返し指摘しない方針です。
 
 ## レビュー対象
 
@@ -119,9 +122,30 @@ Issue-1:
 
 Gemini のレビュー結果は PR にコメントとして投稿されます。
 
-- 毎回新しいコメントを追加するのではなく、既存の Gemini コメントを更新する
-- これにより、古いレビューと新しいレビューが混在しにくくなる
-- 最新のレビュー結果を追いやすくする
+- 既存の Gemini コメントは編集しない
+- レビュー実行ごとに新しいコメントを追加する
+- これにより、レビューの時系列と判断の流れを追いやすくする
+- 古いコメントは履歴として扱い、最新の状態は新しいコメントと後続の人間コメントで判断する
+
+## TODO 管理
+
+Gemini の指摘のうち、現時点では重大ではないが将来見直したいものは `docs/GEMINI_REVIEW_TODO.md` に追加します。
+
+TODO に追加する例:
+
+- 本番運用前には対応したいセキュリティ強化
+- 今回の PR ではスコープ外の設計論点
+- 将来の機能追加時に必要になる検証やガード
+- 繰り返し指摘されやすいが、現状の脅威モデルでは即時対応しない項目
+
+TODO に追加しない例:
+
+- 明確な誤検知
+- 既に実装または仕様書で対応済みの内容
+- スタイルや任意改善の提案
+- patch から断定できない推測
+
+TODO の詳細な運用ルールは `docs/GEMINI_REVIEW_TODO_SPEC.md` に従います。
 
 ## モデル運用
 
@@ -216,3 +240,5 @@ Gemini レビューには以下の制約があります。
 - workflow: `.github/workflows/gemini-pr-review.yaml`
 - review script: `scripts/gemini-review.js`
 - rules summary: `docs/REVIEW_RULES_SUMMARY.md`
+- review TODO: `docs/GEMINI_REVIEW_TODO.md`
+- review TODO spec: `docs/GEMINI_REVIEW_TODO_SPEC.md`
