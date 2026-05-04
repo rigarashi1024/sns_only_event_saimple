@@ -48,7 +48,7 @@ type IssuedTokens struct {
 	InternalAccessTokenExpiresInSec int32
 }
 
-type internalJWTClaims struct {
+type InternalJWTClaims struct {
 	Subject   string `json:"sub"` // 認証済みユーザー ID
 	SessionID string `json:"sid"` // sessions ドキュメント ID と対応するセッション ID
 	JTI       string `json:"jti"` // 発行した JWT 自体を識別する ID
@@ -107,7 +107,7 @@ func (s *TokenService) IssueSessionTokens(userID string, now time.Time) (*Issued
 	providerAccessTokenExpiresAt := now.Add(accessTokenTTL)
 	providerRefreshTokenExpiresAt := now.Add(refreshTokenTTL)
 	// フロント用 access token は、session_id / user_id / jti / exp を含む internal JWT として発行する。
-	internalAccessToken, err := s.signInternalJWT(internalJWTClaims{
+	internalAccessToken, err := s.signInternalJWT(InternalJWTClaims{
 		Subject:   userID,
 		SessionID: sessionID,
 		JTI:       jti,
@@ -143,7 +143,7 @@ func (s *TokenService) IssueSessionTokens(userID string, now time.Time) (*Issued
 	}, nil
 }
 
-func (s *TokenService) signInternalJWT(claims internalJWTClaims) (string, error) {
+func (s *TokenService) signInternalJWT(claims InternalJWTClaims) (string, error) {
 	// JWT header は現時点では HMAC-SHA256 のみを使う。
 	header := map[string]string{
 		"alg": "HS256",
@@ -171,7 +171,7 @@ func (s *TokenService) signInternalJWT(claims internalJWTClaims) (string, error)
 }
 
 // VerifyInternalJWT は internal JWT の形式、署名、期限、必須 claim を検証します。
-func (s *TokenService) VerifyInternalJWT(token string, now time.Time) (*internalJWTClaims, error) {
+func (s *TokenService) VerifyInternalJWT(token string, now time.Time) (*InternalJWTClaims, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
 		return nil, ErrInvalidToken
@@ -208,7 +208,7 @@ func (s *TokenService) VerifyInternalJWT(token string, now time.Time) (*internal
 	if err != nil {
 		return nil, ErrInvalidToken
 	}
-	var claims internalJWTClaims
+	var claims InternalJWTClaims
 	if err := json.Unmarshal(claimsJSON, &claims); err != nil {
 		return nil, ErrInvalidToken
 	}

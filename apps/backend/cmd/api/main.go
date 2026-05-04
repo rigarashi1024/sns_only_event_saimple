@@ -38,7 +38,11 @@ func main() {
 	// local は HTTP で動かすため Secure=false、dev/prd は HTTPS 前提で Secure=true にする。
 	cookieSecure := cfg.Env != config.EnvLocal
 	handler := httpHandler.NewHandler(firestoreClient, tokenService, cookieSecure)
-	server := api.Handler(handler)
+	server := api.HandlerWithOptions(handler, api.StdHTTPServerOptions{
+		Middlewares: []api.MiddlewareFunc{
+			handler.WithAuth,
+		},
+	})
 	server = httpHandler.WithCORS(server, cfg)
 
 	log.Println("listening on :8081")
