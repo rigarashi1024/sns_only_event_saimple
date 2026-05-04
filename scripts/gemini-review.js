@@ -64,6 +64,7 @@ const MODEL_FALLBACK_LIST = [
 
 const KEY2_MODEL = 'gemini-2.5-flash-lite'
 const MAX_PATCH_CHARS = 12000
+const MAX_DISCUSSION_CONTEXT_CHARS = 8000
 const MAX_REVIEW_FILES = 20
 const SKIP_FILE_PATTERNS = [
   /\.lock$/i,
@@ -124,6 +125,11 @@ function truncatePatch(patch) {
   return `${patch.slice(0, MAX_PATCH_CHARS)}\n\n... [truncated]`
 }
 
+function truncateText(text, maxChars) {
+  if (text.length <= maxChars) return text
+  return `${text.slice(0, maxChars)}\n\n... [truncated]`
+}
+
 async function fetchAllPages(url) {
   const items = []
   let page = 1
@@ -145,14 +151,39 @@ async function fetchAllPages(url) {
 async function fetchPullRequestContext() {
   const prResponse = await github.get(`/repos/${repoFullName}/pulls/${prNumber}`)
   const files = await fetchAllPages(`/repos/${repoFullName}/pulls/${prNumber}/files`)
+  const comments = await fetchAllPages(`/repos/${repoFullName}/issues/${prNumber}/comments`)
 
   return {
     pr: prResponse.data,
     files,
+    comments,
   }
 }
 
-function buildPrompt({ pr, file, changedFilesSummary }) {
+function isReviewContextComment(comment) {
+  const body = comment.body?.trim()
+  if (!body) return false
+  if (body.startsWith(BOT_HEADER)) return false
+  if (body === '/gemini-review') return false
+  return true
+}
+
+function buildReviewDiscussionContext(comments) {
+  const discussion = comments
+    .filter(isReviewContextComment)
+    .slice(-10)
+    .map((comment) => {
+      const author = comment.user?.login || 'unknown'
+      const createdAt = comment.created_at || 'unknown'
+      const body = truncateText(comment.body.trim(), 1500)
+      return `- author: ${author}\n  createdAt: ${createdAt}\n  body:\n${body}`
+    })
+    .join('\n\n')
+
+  return truncateText(discussion || '(参考にするPRコメントはありません)', MAX_DISCUSSION_CONTEXT_CHARS)
+}
+
+function buildPrompt({ pr, file, changedFilesSummary, reviewDiscussionContext }) {
   const prBody = pr.body?.trim() || '(本文なし)'
   const patch = truncatePatch(file.patch || '')
 
@@ -167,6 +198,11 @@ ${rulesSummary}
 未反映レビュー指摘TODO:
 ------------------------------------------------------------
 ${reviewTodo || '(TODOファイルなし、または未記載)'}
+------------------------------------------------------------
+
+PRコメント上の確認・判断メモ:
+------------------------------------------------------------
+${reviewDiscussionContext}
 ------------------------------------------------------------
 
 PR情報:
@@ -185,6 +221,7 @@ ${prBody}
 - 上記のプロジェクト固有のレビュールールと制約に従ってください。
 - 未反映レビュー指摘TODOに記載済みの内容は、既に人間が把握して管理しているため、同じ内容を再指摘しないでください。
 - TODOに記載済みの内容でも、今回のpatchがそのリスクを明確に悪化させている場合だけ報告してください。
+- PRコメント上で「対応済み」「意図した実装」「修正不要」と判断済みの指摘は、現在のpatchから明確に誤りだと断定できる場合だけ再指摘してください。
 
 報告してよい問題の種類:
 - bug
@@ -349,8 +386,9 @@ async function postComment(body) {
   let reviewBody
 
   try {
-    const { pr, files } = await fetchPullRequestContext()
+    const { pr, files, comments } = await fetchPullRequestContext()
     const changedFilesSummary = buildChangedFilesSummary(files)
+    const reviewDiscussionContext = buildReviewDiscussionContext(comments)
 
     const reviewableFiles = files.filter((file) => !shouldSkipFile(file)).slice(0, MAX_REVIEW_FILES)
     const skippedCount = files.length - reviewableFiles.length
@@ -366,7 +404,7 @@ async function postComment(body) {
       const results = []
 
       for (const file of reviewableFiles) {
-        const prompt = buildPrompt({ pr, file, changedFilesSummary })
+        const prompt = buildPrompt({ pr, file, changedFilesSummary, reviewDiscussionContext })
         const text = await generateReviewWithRetry(prompt)
         results.push({
           file,
