@@ -5,35 +5,12 @@ description: Sync the local repository with the latest merged main branch. Use a
 
 # Sync Main
 
-Update local `main` after a PR is merged.
+Run the scripted sync:
 
-## Workflow
+```bash
+bash scripts/codex-sync-main.sh
+```
 
-1. Check current state:
-   - `git status --short --branch`
-   - `git branch --show-current`
-2. If there are uncommitted changes:
-   - Stop and ask how to handle them.
-   - Do not stash, commit, discard, or switch branches without user approval.
-3. Fetch remote:
-   - `git fetch origin`
-4. Switch to main:
-   - `git switch main`
-5. Fast-forward only:
-   - `git pull --ff-only origin main`
-6. Verify:
-   - `git status --short --branch`
-   - `git rev-parse HEAD origin/main main`
-   - `git log --oneline --decorate --max-count=5`
-7. Report:
-   - current branch,
-   - current HEAD,
-   - whether `main` equals `origin/main`,
-   - whether the worktree is clean.
+The script checks for a dirty worktree, fetches `origin`, switches to `main`, fast-forwards with `--ff-only`, and prints verification.
 
-## Safety Notes
-
-- Prefer `git switch` over `git checkout`.
-- Use `--ff-only`; do not create merge commits during sync.
-- Never run `git reset --hard` unless explicitly requested.
-- If a merged feature branch remains locally, leave it alone unless the user asks to delete it.
+Codex should not manually run the individual git commands unless the script fails and the failure needs diagnosis.
