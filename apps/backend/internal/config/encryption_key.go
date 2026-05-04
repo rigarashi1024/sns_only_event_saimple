@@ -42,7 +42,7 @@ func getDBEncryptionKeyFromEnv() (string, error) {
 }
 
 func getDBEncryptionKeyFromSecretManager(ctx context.Context, cfg Config) (string, error) {
-	client, err := getSecretManagerClient(ctx)
+	client, err := getSecretManagerClient()
 	if err != nil {
 		return "", err
 	}
@@ -67,9 +67,9 @@ func getDBEncryptionKeyFromSecretManager(ctx context.Context, cfg Config) (strin
 	return key, nil
 }
 
-func getSecretManagerClient(ctx context.Context) (*secretmanager.Client, error) {
+func getSecretManagerClient() (*secretmanager.Client, error) {
 	secretManagerClientOnce.Do(func() {
-		secretManagerClient, secretManagerClientErr = secretmanager.NewClient(ctx)
+		secretManagerClient, secretManagerClientErr = secretmanager.NewClient(context.Background())
 	})
 	if secretManagerClientErr != nil {
 		return nil, fmt.Errorf("failed to create Secret Manager client: %w", secretManagerClientErr)

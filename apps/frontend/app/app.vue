@@ -63,6 +63,9 @@ async function submitLogin() {
       baseURL: config.public.apiBaseUrl,
       method: 'POST',
       credentials: 'include',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
       body: {
         login_id: loginId.value,
         password: password.value,

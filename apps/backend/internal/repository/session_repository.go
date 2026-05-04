@@ -33,6 +33,7 @@ func NewSessionRepository(client *gofirestore.Client) *SessionRepository {
 }
 
 // Create はセッション ID と作成日時を補完して sessions コレクションへ保存します。
+// 同じ ID の既存セッションがある場合は上書きせず、Firestore の AlreadyExists エラーを返します。
 func (r *SessionRepository) Create(ctx context.Context, session Session) error {
 	docRef := r.client.Collection("sessions").Doc(session.ID)
 	// 呼び出し側が ID を指定しない場合は、Firestore の自動 ID で衝突を避ける。

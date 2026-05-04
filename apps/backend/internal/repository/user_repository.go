@@ -47,9 +47,7 @@ func (r *UserRepository) FindByLoginID(ctx context.Context, loginID string) (*Us
 		if decodeErr := doc.DataTo(&user); decodeErr != nil {
 			return nil, decodeErr
 		}
-		if user.ID == "" {
-			user.ID = doc.Ref.ID
-		}
+		user.ID = doc.Ref.ID
 		return &user, nil
 	}
 	// NotFound 以外は接続失敗などの可能性があるため、そのまま上位に返す。
@@ -77,9 +75,7 @@ func (r *UserRepository) findByEmail(ctx context.Context, email string) (*User, 
 	if decodeErr := snap.DataTo(&user); decodeErr != nil {
 		return nil, decodeErr
 	}
-	// 古い seed や手動投入データで id フィールドが空でも、document id をユーザー ID として扱う。
-	if user.ID == "" {
-		user.ID = snap.Ref.ID
-	}
+	// Firestore の document id をアプリケーション上の正規ユーザー ID として扱う。
+	user.ID = snap.Ref.ID
 	return &user, nil
 }

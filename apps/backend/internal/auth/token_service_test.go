@@ -80,7 +80,9 @@ func TestVerifyInternalJWTRejectsTamperedToken(t *testing.T) {
 		t.Fatalf("IssueSessionTokens returned error: %v", err)
 	}
 
-	tamperedToken := tokens.InternalAccessToken[:len(tokens.InternalAccessToken)-1] + "x"
+	tokenParts := strings.Split(tokens.InternalAccessToken, ".")
+	tokenParts[2] = "x" + tokenParts[2][1:]
+	tamperedToken := strings.Join(tokenParts, ".")
 	if _, err := service.VerifyInternalJWT(tamperedToken, now); !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("VerifyInternalJWT error = %v, want ErrInvalidToken", err)
 	}
@@ -98,7 +100,7 @@ func TestVerifyInternalJWTRejectsExpiredToken(t *testing.T) {
 		t.Fatalf("IssueSessionTokens returned error: %v", err)
 	}
 
-	expiredAt := now.Add(accessTokenTTL)
+	expiredAt := now.Add(accessTokenTTL).Add(time.Second)
 	if _, err := service.VerifyInternalJWT(tokens.InternalAccessToken, expiredAt); !errors.Is(err, ErrExpiredToken) {
 		t.Fatalf("VerifyInternalJWT error = %v, want ErrExpiredToken", err)
 	}

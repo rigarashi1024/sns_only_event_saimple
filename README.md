@@ -121,9 +121,9 @@
 - `sessions`
   - `id`: セッション ID。Cookie に保存する独自 `JWT` の `sid` と対応する
   - `user_id`: このセッションが属するユーザー ID
-  - `provider_access_token_encrypted`: provider または local provider 相当の access token を暗号化した値
+  - `provider_access_token_encrypted`: provider または local provider 相当の access token を AES-256-GCM で暗号化した値
   - `provider_access_token_expires_at`: provider access token の有効期限
-  - `provider_refresh_token_encrypted`: provider または local provider 相当の refresh token を暗号化した値
+  - `provider_refresh_token_encrypted`: provider または local provider 相当の refresh token を AES-256-GCM で暗号化した値
   - `provider_refresh_token_expires_at`: provider refresh token の有効期限
   - `internal_jwt_jti`: 発行した独自 `JWT` の `jti`
   - `internal_access_token_expires_at`: Cookie に保存する独自 `JWT` の有効期限
@@ -198,8 +198,8 @@
 - 独自 `JWT` の有効期限は `access_token` と同程度とする
 - 独自 `JWT` は `Cookie` に保存する
 - 独自 `JWT` には `session_id` と `jti` を含め、バックエンドが `sessions` の保存データと照合できるようにする
-- `access_token` と `refresh_token` はフロントへ直接渡さず、バックエンド側で暗号化して保存する
-- 保存先コレクションは `sessions` を使用し、独自 `JWT` の `session_id` と保存済み token を紐づけてセッション管理する
+- `access_token` と `refresh_token` はフロントへ直接渡さず、バックエンド側で暗号化して `sessions` コレクションに保存する
+- 保存先コレクションは `sessions` を使用し、独自 `JWT` の `session_id` と保存済み `access_token` / `refresh_token` を紐づけてセッション管理する
 - リクエスト時は、フロントから送られた `Cookie` 内の独自 `JWT` をバックエンドで検証する
 - 独自 `JWT` が期限切れ、または対応する `access_token` が期限切れの場合は、保存済み `refresh_token` を用いて `access_token` を更新する
 - `refresh_token` も期限切れの場合は再ログインとする
