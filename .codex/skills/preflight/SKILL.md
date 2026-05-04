@@ -15,8 +15,8 @@ bash scripts/codex-preflight.sh
 
 Execution policy:
 
-- Run this script directly via the approved prefix.
-- If the environment may need network/package-manager access, run it with escalation from the first attempt instead of retrying after a sandbox failure.
+- Run this script normally first.
+- Escalate only if it fails due to sandbox, network, or package-manager permissions.
 
 The script owns the command flow and report:
 

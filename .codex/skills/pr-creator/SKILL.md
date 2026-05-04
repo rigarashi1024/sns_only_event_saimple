@@ -9,9 +9,9 @@ Use scripts for the mechanical work.
 
 Execution policy:
 
-- Run `bash scripts/codex-pr-creator.sh ...` with escalation from the first attempt.
-- The script may call GitHub APIs and write to `.git` for commit/push/PR creation, so a normal sandbox run may fail.
-- The prefix is approved in Codex rules.
+- Run `bash scripts/codex-pr-creator.sh ...` normally first.
+- Escalate only if it fails due to sandbox, network, GitHub API, or `.git` write permissions.
+- The prefix is approved in Codex rules for escalation when needed.
 
 1. Inspect current branch and PR state:
 

@@ -13,9 +13,9 @@ bash scripts/codex-sync-main.sh
 
 Execution policy:
 
-- Run this script with escalation from the first attempt.
-- The script writes to `.git` via `fetch`, `switch`, and `pull`, so a normal sandbox run is expected to fail.
-- The prefix `bash scripts/codex-sync-main.sh` is approved in Codex rules.
+- Run this script normally first.
+- Escalate only if it fails due to sandbox, network, or `.git` write permissions.
+- The prefix `bash scripts/codex-sync-main.sh` is approved in Codex rules for escalation when needed.
 
 The script checks for a dirty worktree, fetches `origin`, switches to `main`, fast-forwards with `--ff-only`, and prints verification.
 

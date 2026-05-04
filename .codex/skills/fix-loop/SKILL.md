@@ -9,9 +9,9 @@ Use scripts for GitHub fetch/comment mechanics and keep Codex reasoning only for
 
 Execution policy:
 
-- Run `bash scripts/codex-fix-loop.sh ...` with escalation from the first attempt.
-- The script calls GitHub APIs and posts PR comments, so a normal sandbox run may fail.
-- The prefix is approved in Codex rules.
+- Run `bash scripts/codex-fix-loop.sh ...` normally first.
+- Escalate only if it fails due to sandbox, network, or GitHub API permissions.
+- The prefix is approved in Codex rules for escalation when needed.
 
 1. Fetch the latest Gemini review for the current branch PR:
 
