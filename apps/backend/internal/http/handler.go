@@ -110,7 +110,7 @@ func (h *Handler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 
 	// internal JWT はレスポンス body には載せず、JavaScript から読めない HttpOnly cookie として返す。
 	http.SetCookie(w, &http.Cookie{
-		Name:     "internal_access_token",
+		Name:     internalAccessTokenCookieName,
 		Value:    tokens.InternalAccessToken,
 		Path:     "/",
 		Expires:  tokens.InternalAccessTokenExpiresAt,
