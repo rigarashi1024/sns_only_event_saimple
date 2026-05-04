@@ -14,10 +14,13 @@ Usage:
   scripts/codex-fix-loop.sh latest [PR_NUMBER]
   scripts/codex-fix-loop.sh comment-human PR_NUMBER COMMENT_FILE
   scripts/codex-fix-loop.sh comment-gemini PR_NUMBER COMMENT_FILE
+  scripts/codex-fix-loop.sh comment-human-text PR_NUMBER COMMENT_TEXT
+  scripts/codex-fix-loop.sh comment-gemini-text PR_NUMBER COMMENT_TEXT
   scripts/codex-fix-loop.sh rerun PR_NUMBER
 
 fetch/latest detect PR from the current branch when PR_NUMBER is omitted.
 comment-gemini prepends the Gemini context marker and /gemini-review trigger.
+Use "-" as COMMENT_TEXT to read the body from stdin.
 USAGE
 }
 
@@ -63,6 +66,28 @@ comment_human() {
   gh pr comment "$pr" --body-file "$file"
 }
 
+read_body_arg_or_stdin() {
+  local body="${1:-}"
+  if [ "$body" = "-" ]; then
+    cat
+    return
+  fi
+  printf '%s\n' "$body"
+}
+
+comment_human_text() {
+  local pr="${1:-}"
+  local body_arg="${2:-}"
+  if [ -z "$pr" ] || [ -z "$body_arg" ]; then
+    usage >&2
+    exit 2
+  fi
+
+  local body
+  body="$(read_body_arg_or_stdin "$body_arg")"
+  gh pr comment "$pr" --body "$body"
+}
+
 comment_gemini() {
   local pr="${1:-}"
   local file="${2:-}"
@@ -82,6 +107,19 @@ comment_gemini() {
   rm -f "$tmp"
 }
 
+comment_gemini_text() {
+  local pr="${1:-}"
+  local body_arg="${2:-}"
+  if [ -z "$pr" ] || [ -z "$body_arg" ]; then
+    usage >&2
+    exit 2
+  fi
+
+  local body
+  body="$(read_body_arg_or_stdin "$body_arg")"
+  gh pr comment "$pr" --body "$(printf '%s\n/gemini-review\n\n%s' "$CONTEXT_MARKER" "$body")"
+}
+
 rerun() {
   local pr="${1:-}"
   if [ -z "$pr" ]; then
@@ -96,6 +134,8 @@ case "${1:-}" in
   latest) shift; latest_review "${1:-}" ;;
   comment-human) shift; comment_human "$@" ;;
   comment-gemini) shift; comment_gemini "$@" ;;
+  comment-human-text) shift; comment_human_text "$@" ;;
+  comment-gemini-text) shift; comment_gemini_text "$@" ;;
   rerun) shift; rerun "$@" ;;
   -h|--help|help) usage ;;
   *) usage >&2; exit 2 ;;

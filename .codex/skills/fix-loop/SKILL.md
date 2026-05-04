@@ -38,13 +38,13 @@ Use `fetch` instead of `latest` only when the older review history is needed.
 Human-facing comment, does not rerun Gemini and is not passed to Gemini:
 
 ```bash
-bash scripts/codex-fix-loop.sh comment-human <PR> <COMMENT_FILE>
+bash scripts/codex-fix-loop.sh comment-human-text <PR> "確認しました。..."
 ```
 
 Gemini-context comment, passes the explanation to the next Gemini prompt and triggers rerun:
 
 ```bash
-bash scripts/codex-fix-loop.sh comment-gemini <PR> <COMMENT_FILE>
+bash scripts/codex-fix-loop.sh comment-gemini-text <PR> "確認しました。..."
 ```
 
 Plain rerun without extra context:
@@ -52,5 +52,7 @@ Plain rerun without extra context:
 ```bash
 bash scripts/codex-fix-loop.sh rerun <PR>
 ```
+
+Use `comment-human` / `comment-gemini` with a file only when a multiline hand-written file is specifically needed. For generated comments, prefer the `*-text` commands so the script owns posting without extra temporary files.
 
 Stop after at most 3 iterations, or earlier if Gemini repeats a TODO/comment-only finding.
