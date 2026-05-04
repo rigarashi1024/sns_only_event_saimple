@@ -3,6 +3,8 @@ import axios from 'axios'
 import { GoogleGenerativeAI, GoogleGenerativeAIFetchError } from '@google/generative-ai'
 
 const BOT_HEADER = '### 🤖 Gemini PR Review'
+const REVIEW_TRIGGER = '/gemini-review'
+const REVIEW_CONTEXT_MARKER = '<!-- gemini-review-context -->'
 const apiKey = process.env.GEMINI_API_KEY1
 
 if (!apiKey) {
@@ -163,9 +165,16 @@ async function fetchPullRequestContext() {
 function isReviewContextComment(comment) {
   const body = comment.body?.trim()
   if (!body) return false
-  if (body.startsWith(BOT_HEADER)) return false
-  if (body === '/gemini-review') return false
-  return true
+  return body.includes(REVIEW_CONTEXT_MARKER)
+}
+
+function normalizeReviewContextBody(body) {
+  return body
+    .replace(REVIEW_CONTEXT_MARKER, '')
+    .split('\n')
+    .filter((line) => line.trim() !== REVIEW_TRIGGER)
+    .join('\n')
+    .trim()
 }
 
 function buildReviewDiscussionContext(comments) {
@@ -175,7 +184,7 @@ function buildReviewDiscussionContext(comments) {
     .map((comment) => {
       const author = comment.user?.login || 'unknown'
       const createdAt = comment.created_at || 'unknown'
-      const body = truncateText(comment.body.trim(), 1500)
+      const body = truncateText(normalizeReviewContextBody(comment.body), 1500)
       return `- author: ${author}\n  createdAt: ${createdAt}\n  body:\n${body}`
     })
     .join('\n\n')
@@ -200,7 +209,7 @@ ${rulesSummary}
 ${reviewTodo || '(TODOファイルなし、または未記載)'}
 ------------------------------------------------------------
 
-PRコメント上の確認・判断メモ:
+Geminiレビュー用コメント上の確認・判断メモ:
 ------------------------------------------------------------
 ${reviewDiscussionContext}
 ------------------------------------------------------------
@@ -221,7 +230,7 @@ ${prBody}
 - 上記のプロジェクト固有のレビュールールと制約に従ってください。
 - 未反映レビュー指摘TODOに記載済みの内容は、既に人間が把握して管理しているため、同じ内容を再指摘しないでください。
 - TODOに記載済みの内容でも、今回のpatchがそのリスクを明確に悪化させている場合だけ報告してください。
-- PRコメント上で「対応済み」「意図した実装」「修正不要」と判断済みの指摘は、現在のpatchから明確に誤りだと断定できる場合だけ再指摘してください。
+- Geminiレビュー用コメント上で「対応済み」「意図した実装」「修正不要」と判断済みの指摘は、現在のpatchから明確に誤りだと断定できる場合だけ再指摘してください。
 
 報告してよい問題の種類:
 - bug

@@ -37,13 +37,15 @@ Do not fix style, naming, speculative, or TODO-managed issues just because Gemin
    - Include PR number/comment URL, reason to defer, and revisit timing.
 5. For `comment` items:
    - Post a concise PR comment explaining why no code change is needed.
+   - Use a human-facing comment when the loop should stop.
+   - Use a Gemini-context comment only when Gemini should rerun with the explanation as context.
 6. Run relevant validation:
    - Backend Go: `env GOCACHE=/private/tmp/sns-only-event-go-cache GOMODCACHE=/Users/igarashiryuuta/go/pkg/mod go test ./...` from `apps/backend`.
    - Frontend: `npm run build` from `apps/frontend` when frontend changed.
    - Script-only JS: `node --check <file>`.
 7. Commit and push only when the user asked to carry the loop through or when operating under this skill for an existing PR.
 8. Trigger Gemini rerun if needed:
-   - `gh pr comment <PR> --body "/gemini-review"`
+   - Post a Gemini-context comment that contains both `<!-- gemini-review-context -->` and `/gemini-review`.
 9. Repeat at most 3 iterations. Stop earlier if:
    - validation fails and needs human judgment,
    - Gemini repeats a TODO/comment-only finding,
@@ -53,9 +55,23 @@ Do not fix style, naming, speculative, or TODO-managed issues just because Gemin
 
 Use comments to preserve the review flow. Do not edit old Gemini comments.
 
-Comment format:
+Human-facing comment format:
 
 ```md
+確認しました。
+
+- Finding ...: 今回は修正不要です。理由: ...
+- Finding ...: `docs/GEMINI_REVIEW_TODO.md` に TODO として記録しました。理由: ...
+```
+
+Gemini-context comment format:
+
+Use this only when you want GitHub Actions to rerun Gemini review and pass the explanation into the next Gemini prompt. Normal human-facing comments must not include this marker or `/gemini-review`.
+
+```md
+<!-- gemini-review-context -->
+/gemini-review
+
 確認しました。
 
 - Finding ...: 今回は修正不要です。理由: ...
