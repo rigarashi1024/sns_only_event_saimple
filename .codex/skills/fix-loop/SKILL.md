@@ -7,6 +7,12 @@ description: Handle Gemini PR review feedback for this repo. Use when the user a
 
 Use scripts for GitHub fetch/comment mechanics and keep Codex reasoning only for classification.
 
+Execution policy:
+
+- Run `bash scripts/codex-fix-loop.sh ...` normally first.
+- Escalate only if it fails due to sandbox, network, or GitHub API permissions.
+- The prefix is approved in Codex rules for escalation when needed.
+
 1. Fetch the latest Gemini review for the current branch PR:
 
 ```bash
@@ -32,13 +38,13 @@ Use `fetch` instead of `latest` only when the older review history is needed.
 Human-facing comment, does not rerun Gemini and is not passed to Gemini:
 
 ```bash
-bash scripts/codex-fix-loop.sh comment-human <PR> <COMMENT_FILE>
+bash scripts/codex-fix-loop.sh comment-human-text <PR> "確認しました。..."
 ```
 
 Gemini-context comment, passes the explanation to the next Gemini prompt and triggers rerun:
 
 ```bash
-bash scripts/codex-fix-loop.sh comment-gemini <PR> <COMMENT_FILE>
+bash scripts/codex-fix-loop.sh comment-gemini-text <PR> "確認しました。..."
 ```
 
 Plain rerun without extra context:
@@ -46,5 +52,7 @@ Plain rerun without extra context:
 ```bash
 bash scripts/codex-fix-loop.sh rerun <PR>
 ```
+
+Use `comment-human` / `comment-gemini` with a file only when a multiline hand-written file is specifically needed. For generated comments, prefer the `*-text` commands so the script owns posting without extra temporary files.
 
 Stop after at most 3 iterations, or earlier if Gemini repeats a TODO/comment-only finding.

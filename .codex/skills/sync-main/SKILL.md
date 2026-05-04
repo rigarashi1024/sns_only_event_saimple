@@ -11,6 +11,12 @@ Run the scripted sync:
 bash scripts/codex-sync-main.sh
 ```
 
+Execution policy:
+
+- Run this script normally first.
+- Escalate only if it fails due to sandbox, network, or `.git` write permissions.
+- The prefix `bash scripts/codex-sync-main.sh` is approved in Codex rules for escalation when needed.
+
 The script checks for a dirty worktree, fetches `origin`, switches to `main`, fast-forwards with `--ff-only`, and prints verification.
 
 Codex should not manually run the individual git commands unless the script fails and the failure needs diagnosis.

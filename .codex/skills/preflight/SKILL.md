@@ -13,6 +13,11 @@ Run the scripted preflight:
 bash scripts/codex-preflight.sh
 ```
 
+Execution policy:
+
+- Run this script normally first.
+- Escalate only if it fails due to sandbox, network, or package-manager permissions.
+
 The script owns the command flow and report:
 
 - frontend format/lint/typecheck/test when scripts exist
