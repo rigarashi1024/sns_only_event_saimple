@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	gofirestore "cloud.google.com/go/firestore"
@@ -35,9 +34,11 @@ func NewSessionRepository(client *gofirestore.Client) *SessionRepository {
 
 // Create はセッション ID と作成日時を補完して sessions コレクションへ保存します。
 func (r *SessionRepository) Create(ctx context.Context, session Session) error {
-	// 呼び出し側が ID を指定しない場合は、ユーザー ID と現在時刻から一意な ID を作る。
+	docRef := r.client.Collection("sessions").Doc(session.ID)
+	// 呼び出し側が ID を指定しない場合は、Firestore の自動 ID で衝突を避ける。
 	if session.ID == "" {
-		session.ID = fmt.Sprintf("session-%s-%d", session.UserID, time.Now().UTC().UnixNano())
+		docRef = r.client.Collection("sessions").NewDoc()
+		session.ID = docRef.ID
 	}
 	if session.CreatedAt.IsZero() {
 		session.CreatedAt = time.Now().UTC()
@@ -46,6 +47,6 @@ func (r *SessionRepository) Create(ctx context.Context, session Session) error {
 		session.UpdatedAt = session.CreatedAt
 	}
 
-	_, err := r.client.Collection("sessions").Doc(session.ID).Set(ctx, session)
+	_, err := docRef.Set(ctx, session)
 	return err
 }

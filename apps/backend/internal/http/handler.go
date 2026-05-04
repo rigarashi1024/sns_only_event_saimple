@@ -117,7 +117,7 @@ func (h *Handler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   int(tokens.InternalAccessTokenExpiresInSec),
 		HttpOnly: true,
 		Secure:   h.cookieSecure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	writeJSON(w, http.StatusOK, gen.LoginResponse{

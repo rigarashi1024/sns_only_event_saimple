@@ -10,7 +10,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"time"
+
+	"golang.org/x/crypto/hkdf"
 )
 
 const (
@@ -53,9 +56,18 @@ func NewTokenService(secret string) (*TokenService, error) {
 		return nil, errors.New("token secret is required")
 	}
 
+	jwtSigningKey, err := deriveKey(secret, "internal-jwt-signing")
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive jwt signing key: %w", err)
+	}
+	dbEncryptKey, err := deriveKey(secret, "db-token-encryption")
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive db encryption key: %w", err)
+	}
+
 	return &TokenService{
-		jwtSigningKey: deriveKey(secret, "internal-jwt-signing"),
-		dbEncryptKey:  deriveKey(secret, "db-token-encryption"),
+		jwtSigningKey: jwtSigningKey,
+		dbEncryptKey:  dbEncryptKey,
 	}, nil
 }
 
@@ -141,8 +153,9 @@ func (s *TokenService) signInternalJWT(claims internalJWTClaims) (string, error)
 		return "", err
 	}
 
-	signingInput := base64.RawURLEncoding.EncodeToString(headerJSON) + "." +
-		base64.RawURLEncoding.EncodeToString(claimsJSON)
+	encodedHeader := base64.RawURLEncoding.EncodeToString(headerJSON)
+	encodedClaims := base64.RawURLEncoding.EncodeToString(claimsJSON)
+	signingInput := encodedHeader + "." + encodedClaims
 	// header.payload を HMAC-SHA256 で署名し、JWT の第 3 要素として付与する。
 	mac := hmac.New(sha256.New, s.jwtSigningKey)
 	_, _ = mac.Write([]byte(signingInput))
@@ -174,10 +187,14 @@ func (s *TokenService) encryptForDB(plaintext string) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(payload), nil
 }
 
-func deriveKey(secret string, purpose string) []byte {
-	// 同じ TOKEN_ENCRYPTION_KEY から用途別の 32 bytes 鍵を作り、署名用と暗号化用を分離する。
-	hash := sha256.Sum256([]byte(purpose + ":" + secret))
-	return hash[:]
+func deriveKey(secret string, purpose string) ([]byte, error) {
+	// HKDF で用途別の 32 bytes 鍵を作り、署名用と暗号化用を分離する。
+	reader := hkdf.New(sha256.New, []byte(secret), nil, []byte(purpose))
+	key := make([]byte, 32)
+	if _, err := io.ReadFull(reader, key); err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 func randomID(prefix string) (string, error) {

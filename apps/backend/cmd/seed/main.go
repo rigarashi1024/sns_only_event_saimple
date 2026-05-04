@@ -11,6 +11,8 @@ import (
 )
 
 const defaultProjectID = "sns-only-event-local"
+const seedPassword = "password"
+const testUserID = "test-user"
 
 type UserSeed struct {
 	ID           string    `firestore:"id"`
@@ -51,15 +53,15 @@ func main() {
 	defer client.Close()
 
 	now := time.Now().UTC()
-	// ローカル検証用ユーザーの初期パスワードは全員 password にする。
-	passwordHash, err := auth.HashPassword("password")
+	// ローカル検証用ユーザーの初期パスワードは全員 seedPassword にする。
+	passwordHash, err := auth.HashPassword(seedPassword)
 	if err != nil {
 		log.Fatalf("failed to hash seed password: %v", err)
 	}
 
 	users := []UserSeed{
 		{
-			ID:           "test-user",
+			ID:           testUserID,
 			Name:         "Test User",
 			Email:        "test@example.com",
 			Nickname:     "test",
@@ -81,7 +83,7 @@ func main() {
 	sessions := []SessionSeed{
 		{
 			ID:                            "session-test-user-001",
-			UserID:                        "test-user",
+			UserID:                        users[0].ID,
 			ProviderType:                  "local",
 			InternalJWTJTI:                "seed-jti-test-user-001",
 			InternalAccessTokenExpiresAt:  now.Add(15 * time.Minute),

@@ -18,7 +18,7 @@
             type="text"
             name="login_id"
             autocomplete="username"
-            placeholder="test-user"
+            placeholder="Login ID or email"
             required
           />
         </label>
@@ -31,7 +31,7 @@
             type="password"
             name="password"
             autocomplete="current-password"
-            placeholder="password"
+            placeholder="Password"
             required
           />
         </label>
@@ -42,11 +42,6 @@
 
         <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
       </form>
-
-      <section class="hint">
-        <p>ダミー実装のため、現在の成功条件は以下です。</p>
-        <code>login_id: test-user / password: password</code>
-      </section>
     </main>
   </div>
 </template>
@@ -54,8 +49,8 @@
 <script setup lang="ts">
 const config = useRuntimeConfig()
 
-const loginId = ref('test-user')
-const password = ref('password')
+const loginId = ref('')
+const password = ref('')
 const pending = ref(false)
 const errorMessage = ref('')
 
@@ -178,17 +173,4 @@ async function submitLogin() {
   font-size: 14px;
 }
 
-.hint {
-  margin-top: 24px;
-  padding: 16px;
-  border-radius: 16px;
-  background: #f3e9dc;
-  color: #5b4d41;
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.hint p {
-  margin: 0 0 8px;
-}
 </style>
