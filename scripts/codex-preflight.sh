@@ -91,7 +91,7 @@ if [ -f "$BACKEND_DIR/go.mod" ]; then
   section "Backend"
   (
     cd "$BACKEND_DIR" &&
-      run_step "backend go test" env GOCACHE=/private/tmp/sns-only-event-go-cache GOMODCACHE=/Users/igarashiryuuta/go/pkg/mod go test ./...
+      run_step "backend go test" env GOCACHE="${GOCACHE:-/tmp/sns-only-event-go-cache}" go test ./...
   ) || overall=1
 else
   printf '[SKIP] backend: %s not found\n' "$BACKEND_DIR/go.mod"
