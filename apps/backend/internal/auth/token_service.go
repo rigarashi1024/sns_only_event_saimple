@@ -11,9 +11,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/hkdf"
+)
+
+var (
+	ErrInvalidToken = errors.New("invalid token")
+	ErrExpiredToken = errors.New("expired token")
 )
 
 const (
@@ -162,6 +168,58 @@ func (s *TokenService) signInternalJWT(claims internalJWTClaims) (string, error)
 	signature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 
 	return signingInput + "." + signature, nil
+}
+
+// VerifyInternalJWT は internal JWT の形式、署名、期限、必須 claim を検証します。
+func (s *TokenService) VerifyInternalJWT(token string, now time.Time) (*internalJWTClaims, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, ErrInvalidToken
+	}
+
+	headerJSON, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+	var header struct {
+		Algorithm string `json:"alg"`
+		Type      string `json:"typ"`
+	}
+	if err := json.Unmarshal(headerJSON, &header); err != nil {
+		return nil, ErrInvalidToken
+	}
+	if header.Algorithm != "HS256" || header.Type != "JWT" {
+		return nil, ErrInvalidToken
+	}
+
+	signingInput := parts[0] + "." + parts[1]
+	mac := hmac.New(sha256.New, s.jwtSigningKey)
+	_, _ = mac.Write([]byte(signingInput))
+	expectedSignature := mac.Sum(nil)
+	actualSignature, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+	if !hmac.Equal(actualSignature, expectedSignature) {
+		return nil, ErrInvalidToken
+	}
+
+	claimsJSON, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+	var claims internalJWTClaims
+	if err := json.Unmarshal(claimsJSON, &claims); err != nil {
+		return nil, ErrInvalidToken
+	}
+	if claims.Subject == "" || claims.SessionID == "" || claims.JTI == "" || claims.ExpiresAt == 0 {
+		return nil, ErrInvalidToken
+	}
+	if !now.Before(time.Unix(claims.ExpiresAt, 0)) {
+		return nil, ErrExpiredToken
+	}
+
+	return &claims, nil
 }
 
 func (s *TokenService) encryptForDB(plaintext string) (string, error) {

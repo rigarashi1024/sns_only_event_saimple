@@ -4,12 +4,19 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 )
 
 const tokenEncryptionKeyEnvName = "TOKEN_ENCRYPTION_KEY"
+
+var (
+	secretManagerClientOnce sync.Once
+	secretManagerClient     *secretmanager.Client
+	secretManagerClientErr  error
+)
 
 // GetDBEncryptionKey は DB 保存用トークン暗号化キーを実行環境に応じて取得します。
 // local では環境変数から TOKEN_ENCRYPTION_KEY を読み込みます。
@@ -35,11 +42,10 @@ func getDBEncryptionKeyFromEnv() (string, error) {
 }
 
 func getDBEncryptionKeyFromSecretManager(ctx context.Context, cfg Config) (string, error) {
-	client, err := secretmanager.NewClient(ctx)
+	client, err := getSecretManagerClient(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to create Secret Manager client: %w", err)
+		return "", err
 	}
-	defer client.Close()
 
 	name := fmt.Sprintf(
 		"projects/%s/secrets/%s/versions/%s",
@@ -59,4 +65,14 @@ func getDBEncryptionKeyFromSecretManager(ctx context.Context, cfg Config) (strin
 		return "", fmt.Errorf("token encryption key secret %q is empty", name)
 	}
 	return key, nil
+}
+
+func getSecretManagerClient(ctx context.Context) (*secretmanager.Client, error) {
+	secretManagerClientOnce.Do(func() {
+		secretManagerClient, secretManagerClientErr = secretmanager.NewClient(ctx)
+	})
+	if secretManagerClientErr != nil {
+		return nil, fmt.Errorf("failed to create Secret Manager client: %w", secretManagerClientErr)
+	}
+	return secretManagerClient, nil
 }

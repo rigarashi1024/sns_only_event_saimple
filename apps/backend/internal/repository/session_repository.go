@@ -47,6 +47,6 @@ func (r *SessionRepository) Create(ctx context.Context, session Session) error {
 		session.UpdatedAt = session.CreatedAt
 	}
 
-	_, err := docRef.Set(ctx, session)
+	_, err := docRef.Create(ctx, session)
 	return err
 }

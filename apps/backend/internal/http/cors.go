@@ -16,11 +16,7 @@ func WithCORS(next http.Handler, cfg config.Config) http.Handler {
 		origin := r.Header.Get("Origin")
 		if origin != "" {
 			if _, ok := allowedOrigins[origin]; !ok {
-				if r.Method == http.MethodOptions {
-					w.WriteHeader(http.StatusForbidden)
-					return
-				}
-				next.ServeHTTP(w, r)
+				w.WriteHeader(http.StatusForbidden)
 				return
 			}
 

@@ -71,9 +71,8 @@ async function submitLogin() {
 
     window.alert('ログインが完了しました。')
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'ログインに失敗しました。'
-    errorMessage.value = message
+    console.error('Login failed:', error)
+    errorMessage.value = 'ログインに失敗しました。'
   } finally {
     pending.value = false
   }

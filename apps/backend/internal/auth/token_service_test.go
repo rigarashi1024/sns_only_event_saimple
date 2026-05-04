@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -50,5 +51,55 @@ func TestIssueSessionTokens(t *testing.T) {
 	}
 	if tokens.InternalAccessTokenExpiresInSec != int32(accessTokenTTL/time.Second) {
 		t.Fatalf("InternalAccessTokenExpiresInSec = %d, want %d", tokens.InternalAccessTokenExpiresInSec, int32(accessTokenTTL/time.Second))
+	}
+
+	claims, err := service.VerifyInternalJWT(tokens.InternalAccessToken, now)
+	if err != nil {
+		t.Fatalf("VerifyInternalJWT returned error: %v", err)
+	}
+	if claims.Subject != "test-user" {
+		t.Fatalf("claims.Subject = %q, want test-user", claims.Subject)
+	}
+	if claims.SessionID != tokens.SessionID {
+		t.Fatalf("claims.SessionID = %q, want %q", claims.SessionID, tokens.SessionID)
+	}
+	if claims.JTI != tokens.JTI {
+		t.Fatalf("claims.JTI = %q, want %q", claims.JTI, tokens.JTI)
+	}
+}
+
+func TestVerifyInternalJWTRejectsTamperedToken(t *testing.T) {
+	service, err := NewTokenService("local-test-secret")
+	if err != nil {
+		t.Fatalf("NewTokenService returned error: %v", err)
+	}
+
+	now := time.Date(2026, 5, 2, 12, 0, 0, 0, time.UTC)
+	tokens, err := service.IssueSessionTokens("test-user", now)
+	if err != nil {
+		t.Fatalf("IssueSessionTokens returned error: %v", err)
+	}
+
+	tamperedToken := tokens.InternalAccessToken[:len(tokens.InternalAccessToken)-1] + "x"
+	if _, err := service.VerifyInternalJWT(tamperedToken, now); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("VerifyInternalJWT error = %v, want ErrInvalidToken", err)
+	}
+}
+
+func TestVerifyInternalJWTRejectsExpiredToken(t *testing.T) {
+	service, err := NewTokenService("local-test-secret")
+	if err != nil {
+		t.Fatalf("NewTokenService returned error: %v", err)
+	}
+
+	now := time.Date(2026, 5, 2, 12, 0, 0, 0, time.UTC)
+	tokens, err := service.IssueSessionTokens("test-user", now)
+	if err != nil {
+		t.Fatalf("IssueSessionTokens returned error: %v", err)
+	}
+
+	expiredAt := now.Add(accessTokenTTL)
+	if _, err := service.VerifyInternalJWT(tokens.InternalAccessToken, expiredAt); !errors.Is(err, ErrExpiredToken) {
+		t.Fatalf("VerifyInternalJWT error = %v, want ErrExpiredToken", err)
 	}
 }
