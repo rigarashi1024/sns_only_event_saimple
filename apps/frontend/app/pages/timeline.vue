@@ -61,21 +61,36 @@ const pending = ref(true)
 const errorMessage = ref('')
 const items = ref<TimelineEntry[]>([])
 
+function redirectToLogin() {
+  window.alert('セッションの有効期限が切れました。ログイン画面へ移動します。')
+  window.location.assign('/login')
+}
+
 async function loadTimeline() {
   pending.value = true
   errorMessage.value = ''
 
   try {
-    const response = await $fetch<TimelineListResponse>('timeline', {
+    const response = await $fetch.raw<TimelineListResponse>('timeline', {
       baseURL: config.public.apiBaseUrl,
       method: 'GET',
       credentials: 'include',
       headers: {
         'X-Requested-With': 'XMLHttpRequest',
       },
+      ignoreResponseError: true,
     })
 
-    items.value = response.items
+    if (response.status === 401) {
+      redirectToLogin()
+      return
+    }
+
+    if (response.status >= 400) {
+      throw new Error(`timeline request failed with status ${response.status}`)
+    }
+
+    items.value = response._data?.items ?? []
   } catch (error) {
     console.error('Failed to load timeline:', error)
     errorMessage.value = 'タイムラインの取得に失敗しました。ログイン状態を確認してください。'
