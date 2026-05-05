@@ -54,8 +54,8 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	user, err := h.userRepo.FindByID(r.Context(), authInfo.UserID)
 	if err != nil {
 		if errors.Is(err, repository.ErrUserNotFound) {
-			writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
-				Message: "authenticated user not found",
+			writeJSON(w, http.StatusNotFound, gen.ErrorResponse{
+				Message: "user not found",
 			})
 			return
 		}
