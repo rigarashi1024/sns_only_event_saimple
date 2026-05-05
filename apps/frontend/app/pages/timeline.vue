@@ -1,5 +1,7 @@
 <template>
   <div class="page">
+    <AppHeader />
+
     <main class="layout">
       <section class="hero">
         <p class="eyebrow">After Login</p>
@@ -56,41 +58,21 @@ type TimelineListResponse = {
   items: TimelineEntry[]
 }
 
-const config = useRuntimeConfig()
 const pending = ref(true)
 const errorMessage = ref('')
 const items = ref<TimelineEntry[]>([])
-
-function redirectToLogin() {
-  window.alert('セッションの有効期限が切れました。ログイン画面へ移動します。')
-  window.location.assign('/login')
-}
+const { fetchWithSession } = useAuthenticatedApi()
 
 async function loadTimeline() {
   pending.value = true
   errorMessage.value = ''
 
   try {
-    const response = await $fetch.raw<TimelineListResponse>('timeline', {
-      baseURL: config.public.apiBaseUrl,
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-      ignoreResponseError: true,
-    })
-
-    if (response.status === 401) {
-      redirectToLogin()
+    const response = await fetchWithSession<TimelineListResponse>('timeline')
+    if (!response) {
       return
     }
-
-    if (response.status >= 400) {
-      throw new Error(`timeline request failed with status ${response.status}`)
-    }
-
-    items.value = response._data?.items ?? []
+    items.value = response.items
   } catch (error) {
     console.error('Failed to load timeline:', error)
     errorMessage.value = 'タイムラインの取得に失敗しました。ログイン状態を確認してください。'
@@ -118,7 +100,7 @@ onMounted(async () => {
 <style scoped>
 .page {
   min-height: 100vh;
-  padding: 32px 20px 56px;
+  padding-bottom: 56px;
   background:
     radial-gradient(circle at top left, rgba(255, 204, 138, 0.65) 0%, transparent 28%),
     radial-gradient(circle at top right, rgba(111, 181, 255, 0.2) 0%, transparent 24%),
@@ -129,6 +111,7 @@ onMounted(async () => {
 .layout {
   width: min(100%, 920px);
   margin: 0 auto;
+  padding: 24px 20px 0;
   display: grid;
   gap: 24px;
 }
@@ -254,12 +237,12 @@ onMounted(async () => {
 }
 
 @media (max-width: 640px) {
-  .page {
-    padding-inline: 14px;
-  }
-
   .panel {
     padding: 18px;
+  }
+
+  .layout {
+    padding-inline: 14px;
   }
 
   .panel-header,
