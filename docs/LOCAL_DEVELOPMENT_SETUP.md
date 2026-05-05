@@ -151,10 +151,17 @@ export PUBSUB_PROJECT_ID=sns-only-event-local
 ## 7. Seed データ投入
 
 `users` と `sessions` のダミーデータを Firestore Emulator に投入できます。
+Docker Compose では `backend-seed` service が起動時に自動で seed を投入します。
 
 ```bash
 cd apps/backend
 FIRESTORE_EMULATOR_HOST=localhost:8080 PUBSUB_PROJECT_ID=sns-only-event-local go run ./cmd/seed
+```
+
+手動で再投入したい場合は、Compose から以下を実行します。
+
+```bash
+docker compose -f infra/local/docker-compose.yml run --rm backend-seed
 ```
 
 投入される主なデータ:

@@ -9,7 +9,7 @@ const defaultProjectID = "sns-only-event-local"
 const defaultEnv = "local"
 const defaultTokenEncryptionKeySecretID = "TOKEN_ENCRYPTION_KEY"
 const defaultTokenEncryptionKeySecretVersion = "latest"
-const defaultCORSAllowedOrigins = "http://localhost:3001"
+const defaultCORSAllowedOrigins = "http://localhost:3000,http://localhost:3001"
 
 const (
 	// EnvLocal はローカル PC や Docker Compose での開発環境です。

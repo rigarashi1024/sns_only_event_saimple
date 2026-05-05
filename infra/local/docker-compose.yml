@@ -43,6 +43,25 @@ services:
       - firestore-emulator
       - pubsub-emulator
 
+  backend-seed:
+    build:
+      context: ../..
+      dockerfile: apps/backend/Dockerfile.dev
+    working_dir: /app
+    command: ["/bin/sh", "/workspace/infra/local/scripts/backend-seed.sh"]
+    environment:
+      APP_ENV: local
+      FIRESTORE_EMULATOR_HOST: firestore-emulator:8080
+      PUBSUB_PROJECT_ID: sns-only-event-local
+      TOKEN_ENCRYPTION_KEY: replace-with-local-dev-key
+    volumes:
+      - ../../:/workspace
+      - ../../apps/backend:/app
+      - go_pkg_cache:/go/pkg
+      - go_build_cache:/root/.cache/go-build
+    depends_on:
+      - firestore-emulator
+
   firestore-emulator:
     build:
       context: ../..
