@@ -45,8 +45,8 @@ func (h *Handler) GetHealthz(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	authInfo, ok := AuthInfoFromContext(r.Context())
 	if !ok || authInfo.UserID == "" {
-		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
-			Message: "failed to resolve auth context",
+		writeJSON(w, http.StatusUnauthorized, gen.ErrorResponse{
+			Message: "invalid authentication context",
 		})
 		return
 	}
@@ -54,8 +54,8 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	user, err := h.userRepo.FindByID(r.Context(), authInfo.UserID)
 	if err != nil {
 		if errors.Is(err, repository.ErrUserNotFound) {
-			writeJSON(w, http.StatusNotFound, gen.ErrorResponse{
-				Message: "user not found",
+			writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
+				Message: "authenticated user not found",
 			})
 			return
 		}
@@ -101,8 +101,8 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetTimeline(w http.ResponseWriter, r *http.Request) {
 	authInfo, ok := AuthInfoFromContext(r.Context())
 	if !ok || authInfo.UserID == "" {
-		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
-			Message: "failed to resolve auth context",
+		writeJSON(w, http.StatusUnauthorized, gen.ErrorResponse{
+			Message: "invalid authentication context",
 		})
 		return
 	}
