@@ -59,8 +59,8 @@ func (h *Handler) WithAuth(next http.Handler) http.Handler {
 }
 
 func isPublicEndpoint(r *http.Request) bool {
-	return (r.Method == http.MethodGet && r.URL.Path == "/healthz") ||
-		(r.Method == http.MethodPost && r.URL.Path == "/auth/login")
+	return (r.Method == http.MethodGet && r.URL.Path == "/api/v1/healthz") ||
+		(r.Method == http.MethodPost && r.URL.Path == "/api/v1/auth/login")
 }
 
 func isSessionValidForClaims(session *repository.Session, claims *auth.InternalJWTClaims, now time.Time) bool {

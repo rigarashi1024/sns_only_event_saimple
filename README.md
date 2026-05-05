@@ -98,6 +98,7 @@
 
 - API 仕様書は `OpenAPI` の仕様に従って管理する
 - API 管理方針は `schema-first` で進める
+- HTTP API は `/api/v1/` prefix を採用し、API であることの明示と将来のバージョン管理を両立する
 - 静的解析は必ず実施する
 - 静的解析は `GitHub Actions` 側でも実行する
 

@@ -17,12 +17,12 @@ func TestIsPublicEndpoint(t *testing.T) {
 	}{
 		{
 			name: "healthz is public",
-			req:  mustNewRequest(t, http.MethodGet, "/healthz"),
+			req:  mustNewRequest(t, http.MethodGet, "/api/v1/healthz"),
 			want: true,
 		},
 		{
 			name: "login is public",
-			req:  mustNewRequest(t, http.MethodPost, "/auth/login"),
+			req:  mustNewRequest(t, http.MethodPost, "/api/v1/auth/login"),
 			want: true,
 		},
 		{

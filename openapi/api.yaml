@@ -5,13 +5,13 @@ info:
   description: |
     Event driven SNS backend API.
 servers:
-  - url: http://localhost:8081
+  - url: http://localhost:8081/api/v1
 tags:
   - name: health
   - name: auth
   - name: timeline
 paths:
-  /healthz:
+  /api/v1/healthz:
     get:
       tags:
         - health
@@ -24,7 +24,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthzResponse"
-  /auth/login:
+  /api/v1/auth/login:
     post:
       tags:
         - auth
@@ -63,7 +63,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /timeline:
+  /api/v1/timeline:
     get:
       tags:
         - timeline
