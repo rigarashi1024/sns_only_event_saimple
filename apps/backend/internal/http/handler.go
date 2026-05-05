@@ -16,6 +16,7 @@ import (
 type Handler struct {
 	userRepo     *repository.UserRepository
 	sessionRepo  *repository.SessionRepository
+	timelineRepo *repository.TimelineRepository
 	tokenService *auth.TokenService
 	cookieSecure bool
 }
@@ -25,6 +26,7 @@ func NewHandler(firestoreClient *gofirestore.Client, tokenService *auth.TokenSer
 	return &Handler{
 		userRepo:     repository.NewUserRepository(firestoreClient),
 		sessionRepo:  repository.NewSessionRepository(firestoreClient),
+		timelineRepo: repository.NewTimelineRepository(firestoreClient),
 		tokenService: tokenService,
 		cookieSecure: cookieSecure,
 	}
@@ -34,6 +36,43 @@ func NewHandler(firestoreClient *gofirestore.Client, tokenService *auth.TokenSer
 func (h *Handler) GetHealthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, gen.HealthzResponse{
 		Status: "ok",
+	})
+}
+
+// GetTimeline は認証済みユーザー向けに事前構築済み timelines を返します。
+func (h *Handler) GetTimeline(w http.ResponseWriter, r *http.Request) {
+	authInfo, ok := AuthInfoFromContext(r.Context())
+	if !ok || authInfo.UserID == "" {
+		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
+			Message: "failed to resolve auth context",
+		})
+		return
+	}
+
+	timelines, err := h.timelineRepo.ListByOwnerUserID(r.Context(), authInfo.UserID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
+			Message: "failed to load timeline",
+		})
+		return
+	}
+
+	items := make([]gen.TimelineEntry, 0, len(timelines))
+	for _, timeline := range timelines {
+		items = append(items, gen.TimelineEntry{
+			Id:                  timeline.ID,
+			PostId:              timeline.PostID,
+			PostUserId:          timeline.PostUserID,
+			Content:             timeline.Content,
+			PostCreatedAt:       timeline.PostCreatedAt,
+			TimelineOwnerUserId: timeline.TimelineOwnerUserID,
+			CreatedAt:           timeline.CreatedAt,
+			UpdatedAt:           timeline.UpdatedAt,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, gen.TimelineListResponse{
+		Items: items,
 	})
 }
 
