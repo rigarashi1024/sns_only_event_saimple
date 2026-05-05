@@ -33,6 +33,24 @@ func NewUserRepository(client *gofirestore.Client) *UserRepository {
 	return &UserRepository{client: client}
 }
 
+// FindByID は users/{userID} を取得します。
+func (r *UserRepository) FindByID(ctx context.Context, userID string) (*User, error) {
+	doc, err := r.client.Collection("users").Doc(userID).Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	var user User
+	if decodeErr := doc.DataTo(&user); decodeErr != nil {
+		return nil, decodeErr
+	}
+	user.ID = doc.Ref.ID
+	return &user, nil
+}
+
 // FindByLoginID は document id と email の両方でログイン対象ユーザーを検索します。
 func (r *UserRepository) FindByLoginID(ctx context.Context, loginID string) (*User, error) {
 	// email 形式の入力は email 検索を優先し、document ID と email が衝突した場合の誤認証を避ける。

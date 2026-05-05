@@ -10,6 +10,7 @@ tags:
   - name: health
   - name: auth
   - name: timeline
+  - name: profile
 paths:
   /api/v1/healthz:
     get:
@@ -81,6 +82,34 @@ paths:
                 $ref: "#/components/schemas/TimelineListResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/profile:
+    get:
+      tags:
+        - profile
+      operationId: getProfile
+      summary: Get profile for the authenticated user
+      description: |
+        認証済みユーザー向けに、自分のプロフィール情報と過去の投稿一覧を返します。
+        初期実装ではログイン中ユーザー自身の情報のみを対象とします。
+      responses:
+        "200":
+          description: Profile fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
           content:
             application/json:
               schema:
@@ -174,6 +203,74 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TimelineEntry"
+    UserProfile:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - nickname
+      properties:
+        id:
+          type: string
+          example: test-user
+        name:
+          type: string
+          example: Test User
+        email:
+          type: string
+          example: test@example.com
+        nickname:
+          type: string
+          example: test
+    UserPostSummary:
+      type: object
+      required:
+        - id
+        - user_id
+        - content
+        - like_count
+        - comment_count
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          example: post-test-user-001
+        user_id:
+          type: string
+          example: test-user
+        content:
+          type: string
+          example: test-user からの最初の投稿です。
+        like_count:
+          type: integer
+          format: int32
+          example: 1
+        comment_count:
+          type: integer
+          format: int32
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          example: 2026-05-05T09:00:00Z
+        updated_at:
+          type: string
+          format: date-time
+          example: 2026-05-05T09:00:00Z
+    ProfileResponse:
+      type: object
+      required:
+        - user
+        - posts
+      properties:
+        user:
+          $ref: "#/components/schemas/UserProfile"
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserPostSummary"
     ErrorResponse:
       type: object
       required:
