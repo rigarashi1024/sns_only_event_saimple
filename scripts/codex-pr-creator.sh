@@ -10,11 +10,13 @@ Usage:
   scripts/codex-pr-creator.sh inspect
   scripts/codex-pr-creator.sh create "PR title" PR_BODY_FILE [COMMIT_MESSAGE] [--draft]
   scripts/codex-pr-creator.sh create-auto "PR title" [COMMIT_MESSAGE] [--draft]
+  scripts/codex-pr-creator.sh create-auto --topic TOPIC --title "PR title" --commit-message "message" [--draft]
 
 Environment fallback for create:
   PR_TITLE
   PR_BODY_FILE
   COMMIT_MESSAGE
+  PR_TOPIC
   DRAFT=1
 USAGE
 }
@@ -36,11 +38,11 @@ inspect() {
   printf '\n== Diff Stat ==\n'
   git diff --stat || true
 
-  printf '\n== Commits ahead of main ==\n'
-  git log --oneline main..HEAD || true
+  printf '\n== Commits ahead of origin/main ==\n'
+  git log --oneline origin/main..HEAD || true
 
   printf '\n== Existing PRs for branch ==\n'
-  gh pr list --head "$branch" --json number,title,url,state,isDraft
+  gh pr list --head "$branch" --state all --json number,title,url,state,isDraft
 }
 
 is_draft_arg() {
@@ -50,6 +52,61 @@ is_draft_arg() {
     fi
   done
   return 1
+}
+
+sanitize_topic() {
+  local topic="$1"
+  topic="$(printf '%s' "$topic" | tr '[:upper:]' '[:lower:]')"
+  topic="$(printf '%s' "$topic" | sed -E 's#[^a-z0-9._/-]+#-#g; s#^-+##; s#-+$##')"
+  if [ -z "$topic" ]; then
+    printf '[STOP] Topic became empty after sanitization.\n' >&2
+    exit 2
+  fi
+  case "$topic" in
+    ai/*) printf '%s\n' "$topic" ;;
+    *) printf 'ai/%s\n' "$topic" ;;
+  esac
+}
+
+merged_pr_state_for_branch() {
+  local branch="$1"
+  gh pr list --head "$branch" --state all --json state --jq '.[0].state // ""'
+}
+
+prepare_branch() {
+  local topic="$1"
+  local current target state ahead_count
+
+  git fetch origin
+
+  current="$(current_branch)"
+  if [ -z "$topic" ]; then
+    if [ "$current" = "main" ]; then
+      printf '[STOP] Current branch is main. Pass --topic so a PR branch can be created.\n' >&2
+      exit 2
+    fi
+    return
+  fi
+
+  target="$(sanitize_topic "$topic")"
+  if [ "$current" = "$target" ]; then
+    return
+  fi
+
+  state="$(merged_pr_state_for_branch "$current")"
+  ahead_count="$(git rev-list --count origin/main..HEAD)"
+
+  if [ "$current" = "main" ] || [ "$state" = "MERGED" ] || [ "$ahead_count" = "0" ]; then
+    if git show-ref --verify --quiet "refs/heads/$target"; then
+      git switch "$target"
+    else
+      git switch -c "$target" origin/main
+    fi
+    return
+  fi
+
+  printf '[STOP] Current branch "%s" has unmerged commits. Switch branches manually or omit --topic.\n' "$current" >&2
+  exit 2
 }
 
 commit_if_needed() {
@@ -75,9 +132,9 @@ generate_body_file() {
     printf '## Summary\n\n'
     printf -- '- %s\n\n' "$title"
     printf '## Changes\n\n'
-    git diff --stat main..HEAD | sed 's/^/- /'
+    git diff --stat origin/main..HEAD | sed 's/^/- /'
     printf '\n## Commits\n\n'
-    git log --oneline main..HEAD | sed 's/^/- /'
+    git log --oneline origin/main..HEAD | sed 's/^/- /'
     printf '\n## Validation\n\n'
     printf -- '- [ ] `bash scripts/codex-preflight.sh`\n\n'
     printf '## Review Notes\n\n'
@@ -135,21 +192,53 @@ create() {
 }
 
 create_auto() {
-  local branch
-  branch="$(current_branch)"
-  local title="${PR_TITLE:-${1:-}}"
-  local commit_message="${COMMIT_MESSAGE:-${2:-}}"
+  local title="${PR_TITLE:-}"
+  local commit_message="${COMMIT_MESSAGE:-}"
+  local topic="${PR_TOPIC:-}"
   local draft="${DRAFT:-0}"
   local body_file
 
-  if is_draft_arg "$@"; then
-    draft=1
-  fi
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --topic)
+        topic="${2:-}"
+        shift 2
+        ;;
+      --title)
+        title="${2:-}"
+        shift 2
+        ;;
+      --commit-message)
+        commit_message="${2:-}"
+        shift 2
+        ;;
+      --draft)
+        draft=1
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*)
+        printf '[STOP] Unknown option: %s\n' "$1" >&2
+        exit 2
+        ;;
+      *)
+        if [ -z "$title" ]; then
+          title="$1"
+        elif [ -z "$commit_message" ]; then
+          commit_message="$1"
+        else
+          printf '[STOP] Unexpected argument: %s\n' "$1" >&2
+          exit 2
+        fi
+        shift
+        ;;
+    esac
+  done
 
-  if [ "$branch" = "main" ]; then
-    printf '[STOP] Refusing to create a PR directly from main.\n' >&2
-    exit 2
-  fi
+  prepare_branch "$topic"
 
   if [ -z "$title" ]; then
     usage >&2
@@ -160,7 +249,7 @@ create_auto() {
 
   body_file="$(generate_body_file "$title")"
   trap "rm -f '$body_file'" EXIT
-  push_and_create_or_show_pr "$branch" "$title" "$body_file" "$draft"
+  push_and_create_or_show_pr "$(current_branch)" "$title" "$body_file" "$draft"
 }
 
 case "${1:-}" in

@@ -30,10 +30,12 @@ bash scripts/codex-preflight.sh
 4. Prefer the auto mode so the script owns commit, push, PR body temp file creation, cleanup, and existing PR detection:
 
 ```bash
-bash scripts/codex-pr-creator.sh create-auto "PR title" "commit message"
+bash scripts/codex-pr-creator.sh create-auto --topic topic-name --title "PR title" --commit-message "commit message"
 ```
 
 Append `--draft` when preflight failed, was skipped, or the work is intentionally incomplete.
+
+`create-auto` prepares a PR branch from `origin/main` when the current branch is `main`, already merged, or has no commits ahead of `origin/main`.
 
 Use `create "PR title" PR_BODY_FILE "commit message"` only when a hand-written PR body file is specifically needed.
 
