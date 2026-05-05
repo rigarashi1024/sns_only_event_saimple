@@ -128,7 +128,7 @@ http://localhost:3001
 ヘルスチェック例:
 
 ```bash
-curl http://localhost:8081/healthz
+curl http://localhost:8081/api/v1/healthz
 ```
 
 ### Firestore Emulator

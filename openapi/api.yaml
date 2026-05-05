@@ -5,12 +5,13 @@ info:
   description: |
     Event driven SNS backend API.
 servers:
-  - url: http://localhost:8081
+  - url: http://localhost:8081/api/v1
 tags:
   - name: health
   - name: auth
+  - name: timeline
 paths:
-  /healthz:
+  /api/v1/healthz:
     get:
       tags:
         - health
@@ -23,7 +24,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthzResponse"
-  /auth/login:
+  /api/v1/auth/login:
     post:
       tags:
         - auth
@@ -58,6 +59,28 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/timeline:
+    get:
+      tags:
+        - timeline
+      operationId: getTimeline
+      summary: Get timeline entries for the authenticated user
+      description: |
+        認証済みユーザー向けに、事前構築済みの timelines コレクションからタイムラインを取得します。
+        初期実装ではログインユーザー自身の投稿と、フォロー中ユーザーの投稿が格納済みである前提です。
+      responses:
+        "200":
+          description: Timeline fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimelineListResponse"
+        "401":
+          description: Authentication required
           content:
             application/json:
               schema:
@@ -103,6 +126,54 @@ components:
           format: int32
           description: Lifetime in seconds of the internal access token stored in the HttpOnly cookie.
           example: 900
+    TimelineEntry:
+      type: object
+      required:
+        - id
+        - post_id
+        - post_user_id
+        - content
+        - post_created_at
+        - timeline_owner_user_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          example: timeline-test-user-post-user-002-001
+        post_id:
+          type: string
+          example: post-user-002-001
+        post_user_id:
+          type: string
+          example: user-002
+        content:
+          type: string
+          example: user-002 の投稿です。タイムライン表示確認用です。
+        post_created_at:
+          type: string
+          format: date-time
+          example: 2026-05-05T10:00:00Z
+        timeline_owner_user_id:
+          type: string
+          example: test-user
+        created_at:
+          type: string
+          format: date-time
+          example: 2026-05-05T10:01:00Z
+        updated_at:
+          type: string
+          format: date-time
+          example: 2026-05-05T10:01:00Z
+    TimelineListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineEntry"
     ErrorResponse:
       type: object
       required:
