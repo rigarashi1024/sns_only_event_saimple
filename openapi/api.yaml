@@ -86,6 +86,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/profile:
     get:
       tags:
@@ -213,7 +219,6 @@ components:
           example: Test User
         email:
           type: string
-          format: email
           example: test@example.com
         nickname:
           type: string

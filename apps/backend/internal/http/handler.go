@@ -15,6 +15,7 @@ import (
 // Handler は OpenAPI 生成コードから呼ばれる HTTP ハンドラの実装です。
 type Handler struct {
 	userRepo     *repository.UserRepository
+	postRepo     *repository.PostRepository
 	sessionRepo  *repository.SessionRepository
 	timelineRepo *repository.TimelineRepository
 	tokenService *auth.TokenService
@@ -25,6 +26,7 @@ type Handler struct {
 func NewHandler(firestoreClient *gofirestore.Client, tokenService *auth.TokenService, cookieSecure bool) *Handler {
 	return &Handler{
 		userRepo:     repository.NewUserRepository(firestoreClient),
+		postRepo:     repository.NewPostRepository(firestoreClient),
 		sessionRepo:  repository.NewSessionRepository(firestoreClient),
 		timelineRepo: repository.NewTimelineRepository(firestoreClient),
 		tokenService: tokenService,
@@ -36,6 +38,62 @@ func NewHandler(firestoreClient *gofirestore.Client, tokenService *auth.TokenSer
 func (h *Handler) GetHealthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, gen.HealthzResponse{
 		Status: "ok",
+	})
+}
+
+// GetProfile は認証済みユーザーのプロフィール情報と過去投稿を返します。
+func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	authInfo, ok := AuthInfoFromContext(r.Context())
+	if !ok || authInfo.UserID == "" {
+		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
+			Message: "failed to resolve auth context",
+		})
+		return
+	}
+
+	user, err := h.userRepo.FindByID(r.Context(), authInfo.UserID)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			writeJSON(w, http.StatusNotFound, gen.ErrorResponse{
+				Message: "user not found",
+			})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
+			Message: "failed to load user profile",
+		})
+		return
+	}
+
+	posts, err := h.postRepo.ListByUserID(r.Context(), authInfo.UserID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, gen.ErrorResponse{
+			Message: "failed to load user posts",
+		})
+		return
+	}
+
+	postItems := make([]gen.UserPostSummary, 0, len(posts))
+	for _, post := range posts {
+		postItems = append(postItems, gen.UserPostSummary{
+			Id:           post.ID,
+			UserId:       post.UserID,
+			Content:      post.Content,
+			LikeCount:    int32(post.LikeCount),
+			CommentCount: int32(post.CommentCount),
+			CreatedAt:    post.CreatedAt,
+			UpdatedAt:    post.UpdatedAt,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, gen.ProfileResponse{
+		User: gen.UserProfile{
+			Id:       user.ID,
+			Name:     user.Name,
+			Email:    user.Email,
+			Nickname: user.Nickname,
+		},
+		Posts: postItems,
 	})
 }
 
